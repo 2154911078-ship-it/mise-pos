@@ -61,7 +61,7 @@
 - **横向报头 + 底部状态栏**：替代常见的「左侧栏 + 卡片网格」，更像一份报纸而不是一个后台
 - **暗色主题不是反色**：纸 → 墨，朱砂红保持不变，仍是同一套版面
 
-> 这套设计系统已独立发布为 Skill：**[print-editorial-ui](https://github.com/2154911078-ship-it/print-editorial-ui)**，可在 WorkBuddy 中直接调用，或复制 `public/styles/` 下的四个 CSS 文件复用。
+> 这套设计系统已独立发布为可复用组件库：**[print-editorial-ui](https://github.com/2154911078-ship-it/print-editorial-ui)**，可直接引用或复制 `public/styles/` 下的四个 CSS 文件。
 
 全部由 `public/styles/tokens.css` 里的设计令牌驱动，改一行变量即可换肤。
 
