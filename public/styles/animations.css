@@ -1,35 +1,22 @@
 /* ============================================================================
-   animations.css —— 关键帧、入场编排、页面过渡
-   动效原则：只动 transform / opacity，时长 160–560ms，统一使用 ease-out 曲线。
+   animations.css —— 克制的动效
+   编辑部风格的动作更「慢、短、硬」：位移 6–14px、时长 300–600ms、
+   不使用弹跳与光效，强调线条与文字本身的进入。
    ========================================================================== */
 
-@keyframes aurora {
-  0% {
-    transform: translate3d(-2%, -1%, 0) scale(1);
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
   }
   50% {
-    transform: translate3d(2%, 2%, 0) scale(1.06);
-  }
-  100% {
-    transform: translate3d(-1%, 1%, 0) scale(1.02);
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.55);
-  }
-  70% {
-    box-shadow: 0 0 0 7px rgba(61, 220, 151, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(61, 220, 151, 0);
+    opacity: 0.25;
   }
 }
 
 @keyframes ripple {
   to {
-    transform: scale(2.6);
+    transform: scale(2.4);
     opacity: 0;
   }
 }
@@ -52,7 +39,7 @@
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(28px) scale(0.96);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
@@ -63,7 +50,7 @@
 @keyframes toast-out {
   to {
     opacity: 0;
-    transform: translateX(20px) scale(0.97);
+    transform: translateX(12px);
   }
 }
 
@@ -82,10 +69,16 @@
   }
 }
 
+@keyframes bar-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -94,11 +87,11 @@
 }
 
 @keyframes pop-in {
-  0% {
+  from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.85);
   }
-  100% {
+  to {
     opacity: 1;
     transform: scale(1);
   }
@@ -116,48 +109,17 @@
   30%,
   50%,
   70% {
-    transform: translateX(-5px);
+    transform: translateX(-4px);
   }
   40%,
   60% {
-    transform: translateX(5px);
+    transform: translateX(4px);
   }
 }
 
 @keyframes draw-stroke {
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-@keyframes float-soft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes glow-sweep {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
-}
-
-@keyframes bump {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.18);
-  }
-  100% {
-    transform: scale(1);
   }
 }
 
@@ -170,22 +132,80 @@
   }
 }
 
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 文字遮罩上滑：标题入场的标准动作 */
+@keyframes mask-up {
+  from {
+    transform: translateY(104%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes line-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* 小票条目「打印」出来 */
+@keyframes print-in {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 /* ------------------------------------------------------------ 入场编排 */
 [data-reveal] {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translateY(10px);
 }
 
 [data-reveal].is-in {
   opacity: 1;
   transform: none;
-  transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 55ms);
+  transition: opacity 560ms var(--ease-out), transform 560ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 60ms);
 }
 
 .stagger > * {
-  animation: fade-up 480ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 42ms);
+  animation: fade-up 460ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 38ms);
+}
+
+/* 标题行：外层裁切，内层上滑 */
+.reveal-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+
+.reveal-line > span {
+  display: block;
+  animation: mask-up 860ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 110ms + 120ms);
 }
 
 /* --------------------------------------------------------- 页面级过渡 */
@@ -194,39 +214,25 @@
 }
 
 ::view-transition-new(root) {
-  animation: vt-in 380ms var(--ease-out) both;
+  animation: vt-in 400ms var(--ease-out) both;
 }
 
 @keyframes vt-out {
   to {
     opacity: 0;
-    transform: translateY(-6px) scale(0.995);
+    transform: translateY(-4px);
   }
 }
 
 @keyframes vt-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.995);
+    transform: translateY(8px);
   }
 }
 
 .view-enter {
-  animation: fade-up 420ms var(--ease-out) both;
-}
-
-/* 加入购物车的飞行小球 */
-.fly-dot {
-  position: fixed;
-  z-index: 200;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  pointer-events: none;
-  font-size: 18px;
-  background: var(--panel-2);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-2);
+  animation: fade-up 400ms var(--ease-out) both;
 }
 
 /* ------------------------------------------------------------ 降级策略 */
@@ -240,7 +246,8 @@
     scroll-behavior: auto !important;
   }
 
-  [data-reveal] {
+  [data-reveal],
+  .reveal-line > span {
     opacity: 1;
     transform: none;
   }

@@ -1,19 +1,15 @@
 /**
- * pos.js —— 点单台。
+ * pos.js —— 点单台（菜单列表 + 小票）
  *
- * 交互要点：
- *   · 加入购物车时用 WAAPI 让商品「飞」进右侧栏，形成空间连续感
- *   · 购物车重排走 FLIP，条目不会瞬间跳位
- *   · 金额变化做数字滚动，收银时读数更稳
+ * 视觉隐喻取自真实菜单：编号、菜名、点线引导、右对齐价格。
+ * 加入购物车不做飞球，而是让条目「打印」到右侧小票上，更贴合收银场景。
  */
 import { api } from '../api.js';
 import { icon } from '../icons.js';
-import { money } from '../format.js';
+import { money, PAYMENT_LIST } from '../format.js';
 import { escapeHtml, flip, animateNumber, toast, openModal } from '../ui.js';
 
 export const meta = { title: '点单台', eyebrow: 'ORDER' };
-
-const CATEGORY_ICON = { 咖啡: 'coffee', 茶饮: 'cup', 简餐: 'fries', 甜点: 'cake', 小食: 'fries' };
 
 let view = { category: 'all', keyword: '' };
 let rootEl = null;
@@ -28,44 +24,59 @@ export function render(ctx) {
   <div class="pos">
     <nav class="pos__cats" aria-label="商品分类">
       <button class="pos__cat is-active" data-cat="all">
-        ${icon('grid', 18)}<span>全部</span><span class="pos__cat-dot"></span>
+        <span class="pos__cat__no">00</span>
+        <span class="pos__cat__name">全部</span>
       </button>
       ${categories
         .map(
-          (c) => `
+          (c, i) => `
         <button class="pos__cat" data-cat="${c.id}">
-          ${icon(CATEGORY_ICON[c.name] ?? 'bag', 18)}<span>${escapeHtml(c.name)}</span>
-          <span class="pos__cat-dot" style="color:${c.color}"></span>
+          <span class="pos__cat__no">${String(i + 1).padStart(2, '0')}</span>
+          <span class="pos__cat__name">${escapeHtml(c.name)}</span>
         </button>`
         )
         .join('')}
     </nav>
 
     <section class="pos__menu">
-      <div class="pos__menu-head">
-        <div class="search" style="flex:1;max-width:280px">
-          ${icon('search', 15)}
-          <input class="input" id="pos-search" placeholder="搜索商品…" autocomplete="off" />
+      <header class="pos__menu-head">
+        <div class="pos__menu-title">
+          <h2>菜单</h2>
+          <span class="label" id="pos-count">22 ITEMS</span>
         </div>
-        <div class="row" style="margin-left:auto;gap:8px">
-          <span class="badge badge--flat" id="pos-count"></span>
-          <button class="icon-btn" data-action="refresh-menu" title="刷新菜单">${icon('refresh', 16)}</button>
+        <div class="pos__search search">
+          ${icon('search', 13)}
+          <input class="input" id="pos-search" placeholder="搜索菜名或编号" autocomplete="off" />
         </div>
-      </div>
-      <div class="pos__grid stagger" id="pos-grid"></div>
+        <button class="ghost-btn" data-action="refresh-menu" title="刷新菜单">${icon('refresh', 15)}</button>
+      </header>
+      <div class="menu-list" id="pos-grid"></div>
     </section>
 
-    <aside class="cart" aria-label="购物车">
-      <header class="cart__head">
-        <span style="color:var(--text-2)">${icon('bag', 17)}</span>
-        <span class="card__title">当前订单</span>
-        <span class="cart__count" id="cart-count">0</span>
-        <input class="input" id="table-no" placeholder="桌号 / 外带"
-               style="margin-left:auto;width:104px;height:30px;font-size:12px" maxlength="8" />
+    <aside class="receipt" aria-label="当前单据">
+      <header class="receipt__head">
+        <div class="receipt__title">
+          <h2>单据</h2>
+          <span class="receipt__no" id="receipt-no">未开单</span>
+        </div>
+        <div class="receipt__table">
+          <span class="label">桌号</span>
+          <input class="input" id="table-no" placeholder="外带" maxlength="8" style="width:70px" />
+          <span class="label" id="receipt-count" style="margin-left:auto">0 件</span>
+        </div>
       </header>
-      <div class="cart__body" id="cart-body"></div>
-      <footer class="cart__foot" id="cart-foot"></footer>
+      <div class="receipt__body" id="cart-body"></div>
+      <footer class="receipt__foot" id="cart-foot"></footer>
     </aside>
+
+    <!-- 窄屏：小票让位给一条常驻结算栏，保证手机上也能结账 -->
+    <div class="pos__dock" id="pos-dock" hidden>
+      <div class="pos__dock-info">
+        <span class="label">应收</span>
+        <span class="pos__dock-total" id="dock-total">¥0</span>
+      </div>
+      <button class="btn btn--primary" data-dock="checkout">结账</button>
+    </div>
   </div>`;
 }
 
@@ -90,22 +101,22 @@ export function mount(root, ctx) {
   });
 
   root.querySelector('#pos-grid').addEventListener('click', (e) => {
-    const card = e.target.closest('[data-product]');
-    if (!card) return;
-    addProduct(Number(card.dataset.product), card);
+    const row = e.target.closest('[data-product]');
+    if (!row) return;
+    addProduct(Number(row.dataset.product), row);
   });
 
   root.querySelector('#cart-body').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-qty]');
     if (!btn) return;
     const id = Number(btn.dataset.id);
-    const delta = Number(btn.dataset.qty);
-    const result = ctx.store.changeQty(id, delta);
+    const result = ctx.store.changeQty(id, Number(btn.dataset.qty));
     if (!result.ok && result.reason === 'stock') {
       toast('已达当前库存上限', 'warn');
       return;
     }
     paintCart();
+    paintGrid();
   });
 
   root.querySelector('#cart-foot').addEventListener('click', (e) => {
@@ -115,6 +126,10 @@ export function mount(root, ctx) {
       paintGrid();
     }
     if (e.target.closest('[data-action="checkout"]')) openCheckout();
+  });
+
+  root.querySelector('#pos-dock').addEventListener('click', (e) => {
+    if (e.target.closest('[data-dock="checkout"]')) openCheckout();
   });
 
   root.querySelector('[data-action="refresh-menu"]').addEventListener('click', async () => {
@@ -130,7 +145,7 @@ export function mount(root, ctx) {
   });
 }
 
-/* -------------------------------------------------------------- 商品网格 */
+/* -------------------------------------------------------------- 菜单列表 */
 function visibleProducts() {
   const { products } = ctxRef.store.state.menu;
   const kw = view.keyword.toLowerCase();
@@ -148,12 +163,12 @@ function paintGrid() {
 
   const items = visibleProducts();
   const counter = rootEl.querySelector('#pos-count');
-  if (counter) counter.textContent = `${items.length} 款在售`;
+  if (counter) counter.textContent = `${items.length} ITEMS`;
 
   if (!items.length) {
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
-      <div class="empty__art">🔍</div>
-      <div class="empty__title">没有匹配的商品</div>
+      <div class="empty__art">∅</div>
+      <div class="empty__title">没有匹配的菜品</div>
       <div class="empty__desc">换个关键词，或切回「全部」分类</div>
     </div>`;
     return;
@@ -163,23 +178,28 @@ function paintGrid() {
     .map((p, i) => {
       const qty = ctxRef.store.cartQtyOf(p.id);
       const soldout = p.stock <= 0;
+      const low = p.stock <= p.lowStock;
       return `
-      <button class="product ${soldout ? 'is-soldout' : ''}" data-product="${p.id}" style="--i:${Math.min(i, 12)}">
-        <span class="product__emoji">${p.emoji}</span>
-        <span class="product__name">${escapeHtml(p.name)}</span>
-        <span class="product__meta">
-          <span class="product__price"><small>¥</small>${priceText(p.price)}</span>
-          <span class="product__stock ${p.stock <= p.lowStock ? 'is-low' : ''}">${soldout ? '售罄' : `余 ${p.stock}`}</span>
+      <button class="menu-row ${soldout ? 'is-soldout' : ''}" data-product="${p.id}" style="--i:${Math.min(i, 16)}">
+        <span class="menu-row__no">${String(i + 1).padStart(2, '0')}</span>
+        <span class="menu-row__body">
+          <span class="menu-row__name">${escapeHtml(p.name)}</span>
+          <span class="menu-row__meta ${low ? 'is-low' : ''}">${escapeHtml(p.categoryName)} · ${soldout ? '售罄' : `余 ${p.stock}`}</span>
         </span>
-        <span class="product__add">${icon('plus', 14)}</span>
-        ${qty ? `<span class="product__qty">${qty}</span>` : ''}
+        <span class="menu-row__dots"></span>
+        <span class="menu-row__price">${money(p.price)}</span>
+        ${
+          qty
+            ? `<span class="menu-row__qty">${qty}</span>`
+            : `<span class="menu-row__add">${icon('plus', 13)}</span>`
+        }
       </button>`;
     })
     .join('');
 }
 
-/* ------------------------------------------------------------------ 购物车 */
-function paintCart() {
+/* ------------------------------------------------------------------ 小票 */
+function paintCart(addedId = null) {
   const body = rootEl?.querySelector('#cart-body');
   const foot = rootEl?.querySelector('#cart-foot');
   if (!body || !foot) return;
@@ -187,132 +207,98 @@ function paintCart() {
   const { cart } = ctxRef.store.state;
   const totals = ctxRef.store.totals;
 
+  const countEl = rootEl.querySelector('#receipt-count');
+  if (countEl) countEl.textContent = `${totals.count} 件`;
+
+  const dock = rootEl.querySelector('#pos-dock');
+  if (dock) {
+    dock.hidden = cart.length === 0;
+    const dockTotal = dock.querySelector('#dock-total');
+    if (dockTotal) dockTotal.textContent = money(totals.subtotal);
+  }
+
   if (!cart.length) {
     body.innerHTML = `
-      <div class="empty" style="padding:44px 10px">
-        <div class="empty__art">🧾</div>
-        <div class="empty__title">还没有选商品</div>
-        <div class="empty__desc">点击左侧菜单即可加入，支持边点边结</div>
+      <div class="empty" style="margin:14px 0;border-style:dashed">
+        <div class="empty__art">∅</div>
+        <div class="empty__title">尚未点单</div>
+        <div class="empty__desc">点击左侧菜品，条目会打印到这张小票上</div>
       </div>`;
     foot.innerHTML = `
-      <div class="cart__total">
-        <span class="cart__total-label">应收</span>
-        <span class="cart__total-value"><small>¥</small>0</span>
+      <div class="receipt__total">
+        <span class="receipt__total-label">应收</span>
+        <span class="receipt__total-value"><small>¥</small>0</span>
       </div>
-      <button class="btn btn--primary btn--block btn--lg" disabled>请先选择商品</button>`;
-  } else {
-    flip(body, () => {
-      body.innerHTML = cart
-        .map(
-          (item) => `
-        <div class="cart-item" data-flip-key="${item.productId}">
-          <span class="cart-item__emoji">${item.emoji}</span>
-          <div style="min-width:0">
-            <div class="cart-item__name truncate">${escapeHtml(item.name)}</div>
-            <div class="cart-item__price">${money(item.price)} × ${item.qty}</div>
-          </div>
-          <div class="qty">
-            <button class="qty__btn" data-qty="-1" data-id="${item.productId}" aria-label="减少">−</button>
-            <span class="qty__value">${item.qty}</span>
-            <button class="qty__btn" data-qty="1" data-id="${item.productId}" aria-label="增加">+</button>
-          </div>
-        </div>`
-        )
-        .join('');
-    });
-
-    foot.innerHTML = `
-      <div class="cart__line"><span>商品小计</span><span class="num">${money(totals.subtotal)}</span></div>
-      <div class="cart__line"><span>共 ${totals.count} 件 · ${totals.kinds} 种</span><span class="dim">未含优惠</span></div>
-      <div class="cart__total">
-        <span class="cart__total-label">应收</span>
-        <span class="cart__total-value" id="cart-total"><small>¥</small><span data-total="${totals.subtotal}">0</span></span>
-      </div>
-      <div class="cart__actions">
-        <button class="btn btn--ghost" data-action="clear-cart">${icon('trash', 15)} 清空</button>
-        <button class="btn btn--primary" data-action="checkout">结账 ${icon('arrowRight', 15)}</button>
-      </div>`;
-
-    animateNumber(foot.querySelector('[data-total]'), totals.subtotal / 100, { duration: 480 });
+      <button class="btn btn--block" disabled>请先选择菜品</button>`;
+    return;
   }
 
-  const badge = rootEl.querySelector('#cart-count');
-  if (badge) {
-    badge.textContent = totals.count;
-    badge.classList.remove('is-bump');
-    void badge.offsetWidth;
-    badge.classList.add('is-bump');
-  }
+  flip(body, () => {
+    body.innerHTML = cart
+      .map(
+        (item) => `
+      <div class="receipt-line ${item.productId === addedId ? 'is-new' : ''}" data-flip-key="${item.productId}">
+        <span class="receipt-line__name">${escapeHtml(item.name)}</span>
+        <span class="receipt-line__qty">×${item.qty}</span>
+        <span class="receipt-line__amount">${money(item.price * item.qty)}</span>
+        <span class="receipt-line__ctrl">
+          <button data-qty="-1" data-id="${item.productId}" aria-label="减少">−</button>
+          <button data-qty="1" data-id="${item.productId}" aria-label="增加">+</button>
+        </span>
+      </div>`
+      )
+      .join('');
+  });
+
+  foot.innerHTML = `
+    <div class="receipt__sum"><span>商品小计</span><span>${money(totals.subtotal)}</span></div>
+    <div class="receipt__sum"><span>件数</span><span>${totals.count} 件 / ${totals.kinds} 种</span></div>
+    <div class="receipt__total">
+      <span class="receipt__total-label">应收</span>
+      <span class="receipt__total-value"><small>¥</small><span data-total="${totals.subtotal}">0</span></span>
+    </div>
+    <div class="receipt__actions">
+      <button class="btn btn--ghost" data-action="clear-cart">清空</button>
+      <button class="btn btn--primary" data-action="checkout">结账</button>
+    </div>`;
+
+  animateNumber(foot.querySelector('[data-total]'), totals.subtotal / 100, { duration: 420 });
 }
 
-/* ------------------------------------------------------------- 加入购物车 */
-function addProduct(id, cardEl) {
+/* ------------------------------------------------------------- 加入菜品 */
+function addProduct(id, rowEl) {
   const product = ctxRef.store.state.menu.products.find((p) => p.id === id);
   if (!product) return;
 
   const result = ctxRef.store.addToCart(product, 1);
   if (!result.ok) {
-    cardEl?.animate(
-      [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
-      { duration: 280, easing: 'ease-in-out' }
+    rowEl?.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }],
+      { duration: 260, easing: 'ease-in-out' }
     );
     toast(result.reason === 'stock' ? '库存不足，无法继续添加' : '添加失败', 'warn');
     return;
   }
 
-  flyToCart(cardEl, product.emoji);
-  paintCart();
-  updateCardBadge(id, result.qty);
+  paintCart(id);
+  updateRowQty(id, result.qty);
 }
 
-function updateCardBadge(productId, qty) {
-  const card = rootEl?.querySelector(`[data-product="${productId}"]`);
-  if (!card) return;
-  let badge = card.querySelector('.product__qty');
+function updateRowQty(productId, qty) {
+  const row = rootEl?.querySelector(`[data-product="${productId}"]`);
+  if (!row) return;
+  let badge = row.querySelector('.menu-row__qty');
   if (!badge) {
     badge = document.createElement('span');
-    badge.className = 'product__qty';
-    card.append(badge);
+    badge.className = 'menu-row__qty';
+    const add = row.querySelector('.menu-row__add');
+    if (add) add.replaceWith(badge);
+    else row.append(badge);
   }
   badge.textContent = qty;
   badge.style.animation = 'none';
   void badge.offsetWidth;
   badge.style.animation = '';
-}
-
-function flyToCart(fromEl, emoji) {
-  const target = rootEl?.querySelector('.cart__head');
-  if (!fromEl || !target) return;
-
-  const a = fromEl.getBoundingClientRect();
-  const b = target.getBoundingClientRect();
-  const size = 30;
-
-  const dot = document.createElement('div');
-  dot.className = 'fly-dot';
-  dot.textContent = emoji;
-  dot.style.cssText = `left:${a.left + a.width / 2 - size / 2}px;top:${a.top + a.height / 2 - size / 2}px;width:${size}px;height:${size}px`;
-  document.body.append(dot);
-
-  const dx = b.left + b.width / 2 - (a.left + a.width / 2);
-  const dy = b.top + b.height / 2 - (a.top + a.height / 2);
-
-  const anim = dot.animate(
-    [
-      { transform: 'translate(0,0) scale(1)', opacity: 1 },
-      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 90}px) scale(1.3)`, opacity: 1, offset: 0.5 },
-      { transform: `translate(${dx}px, ${dy}px) scale(0.3)`, opacity: 0.15 },
-    ],
-    { duration: 620, easing: 'cubic-bezier(.4,0,.55,1)' }
-  );
-
-  anim.onfinish = () => {
-    dot.remove();
-    target.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
-      { duration: 260, easing: 'ease-out' }
-    );
-  };
 }
 
 /* ------------------------------------------------------------------ 结账 */
@@ -323,42 +309,37 @@ function openCheckout() {
   let method = 'wechat';
   let discount = 0;
 
-  const methods = [
-    { key: 'wechat', name: '微信支付', emoji: '💚' },
-    { key: 'alipay', name: '支付宝', emoji: '🔵' },
-    { key: 'cash', name: '现金', emoji: '💵' },
-    { key: 'card', name: '银行卡', emoji: '💳' },
-  ];
+  const methods = PAYMENT_LIST;
 
   openModal({
     title: '确认收款',
-    subtitle: `共 ${totals.count} 件商品`,
-    width: 460,
+    subtitle: `${totals.count} 件商品 · ${totals.kinds} 种`,
+    width: 452,
     body: `
-      <div style="text-align:center;padding:6px 0 14px">
-        <div class="dim" style="font-size:11.5px;letter-spacing:.08em">应收金额</div>
-        <div class="cart__total-value" style="font-size:38px;margin-top:2px"><small>¥</small><span id="pay-amount">${(totals.subtotal / 100).toFixed(0)}</span></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:8px 0 20px;border-bottom:1px solid var(--ink)">
+        <span class="label">应收金额</span>
+        <span class="receipt__total-value" style="font-size:44px"><small>¥</small><span id="pay-amount">${(totals.subtotal / 100).toFixed(0)}</span></span>
       </div>
-      <div class="field__label" style="margin-bottom:8px">支付方式</div>
+      <div class="label" style="margin:18px 0 8px">支付方式</div>
       <div class="pay-grid">
         ${methods
           .map(
             (m) => `
           <button class="pay-opt ${m.key === 'wechat' ? 'is-active' : ''}" data-method="${m.key}">
-            <span class="pay-opt__icon">${m.emoji}</span>
-            <span class="pay-opt__name">${m.name}</span>
+            <span class="pay-opt__icon">${m.mark}</span>
+            <span class="pay-opt__name">${m.text}</span>
           </button>`
           )
           .join('')}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
         <label class="field">
           <span class="field__label">优惠金额（元）</span>
           <input class="input" id="pay-discount" type="number" min="0" step="1" value="0" />
         </label>
         <label class="field">
           <span class="field__label">桌号</span>
-          <input class="input" id="pay-table" value="${escapeHtml(sessionStorage.getItem('mise.table') || '')}" placeholder="可选" />
+          <input class="input" id="pay-table" value="${escapeHtml(sessionStorage.getItem('mise.table') || '')}" placeholder="外带" />
         </label>
       </div>`,
     footer: `
@@ -377,7 +358,7 @@ function openCheckout() {
 
       discountInput.addEventListener('input', () => {
         discount = Math.min(Math.max(Number(discountInput.value) || 0, 0), totals.subtotal / 100);
-        animateNumber(amountEl, totals.subtotal / 100 - discount, { duration: 300 });
+        animateNumber(amountEl, totals.subtotal / 100 - discount, { duration: 280 });
       });
 
       const confirmBtn = host.querySelector('#pay-confirm');
@@ -411,8 +392,7 @@ function showSuccess(host, order, close) {
         <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
       </div>
       <div class="success__amount">${money(order.total)}</div>
-      <div class="dim" style="font-size:12px">${order.orderNo} · ${order.paymentMethod === 'cash' ? '现金' : order.paymentMethod === 'wechat' ? '微信支付' : order.paymentMethod === 'alipay' ? '支付宝' : '银行卡'}</div>
-      <div class="badge badge--paid" style="margin-top:10px">已完成收款</div>
+      <div class="label" style="margin-top:6px">${order.orderNo} · ${methodName(order.paymentMethod)}</div>
     </div>`;
   const foot = panel.querySelector('.modal__foot');
   if (foot) foot.style.display = 'none';
@@ -420,6 +400,8 @@ function showSuccess(host, order, close) {
   ctxRef.store.clearCart();
   paintCart();
   sessionStorage.removeItem('mise.table');
+  const noEl = rootEl?.querySelector('#receipt-no');
+  if (noEl) noEl.textContent = order.orderNo;
   ctxRef.refreshMenu?.().then(() => paintGrid());
 
   setTimeout(() => {
@@ -428,8 +410,6 @@ function showSuccess(host, order, close) {
   }, 1700);
 }
 
-/* ------------------------------------------------------------------ 工具 */
-function priceText(cents) {
-  const yuan = cents / 100;
-  return Number.isInteger(yuan) ? String(yuan) : yuan.toFixed(1);
+function methodName(key) {
+  return { cash: '现金', wechat: '微信支付', alipay: '支付宝', card: '银行卡' }[key] ?? key;
 }

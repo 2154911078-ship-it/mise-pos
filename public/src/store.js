@@ -17,8 +17,8 @@ function loadCart() {
 }
 
 function loadTheme() {
-  // 门店场景默认深色（夜间收银居多），用户手动切换后以本地记录为准
-  return localStorage.getItem('mise.theme') || 'dark';
+  // 默认纸感亮色；夜间收银可手动切到墨色
+  return localStorage.getItem('mise.theme') || 'light';
 }
 
 const listeners = new Set();

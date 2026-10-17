@@ -108,7 +108,7 @@ function paint() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty__art">📦</div><div class="empty__title">没有找到商品</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty__art">∅</div><div class="empty__title">没有找到商品</div></div></td></tr>`;
     return;
   }
 
@@ -120,10 +120,10 @@ function paint() {
       <tr>
         <td>
           <div class="row" style="gap:10px">
-            <span class="product__emoji" style="width:34px;height:34px;font-size:16px;border-radius:10px">${p.emoji}</span>
+            <span class="item-thumb">${escapeHtml(p.name.slice(0, 1))}</span>
             <div style="min-width:0">
               <div class="cell-strong">${escapeHtml(p.name)}</div>
-              <div class="dim" style="font-size:10.5px">${escapeHtml(p.sku)}</div>
+              <div class="dim mono" style="font-size:9.5px">${escapeHtml(p.sku)}</div>
             </div>
           </div>
         </td>

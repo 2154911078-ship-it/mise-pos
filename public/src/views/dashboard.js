@@ -4,7 +4,7 @@
  */
 import { api } from '../api.js';
 import { icon } from '../icons.js';
-import { areaChart, donutChart } from '../charts.js';
+import { areaChart } from '../charts.js';
 import { money, compactMoney, pct, signedPct } from '../format.js';
 import { escapeHtml, hydrateCounters, observeReveal, animateNumber } from '../ui.js';
 
@@ -36,7 +36,7 @@ export function render(ctx) {
         </header>
         <div class="card__body">
           <div class="chart" id="series-chart">
-            <div class="skeleton" style="height:250px;border-radius:14px"></div>
+            <div class="skeleton" style="height:250px"></div>
           </div>
         </div>
       </section>
@@ -45,11 +45,11 @@ export function render(ctx) {
         <header class="card__head">
           <div>
             <div class="card__title">品类结构</div>
-            <div class="card__sub">近 30 天营收占比</div>
+            <div class="card__sub">近 30 天商品营收占比</div>
           </div>
         </header>
         <div class="card__body" id="category-chart">
-          <div class="skeleton" style="height:200px;border-radius:14px"></div>
+          <div class="skeleton" style="height:180px"></div>
         </div>
       </section>
     </div>
@@ -62,15 +62,15 @@ export function render(ctx) {
         </div>
       </section>
 
-      <section class="card" data-reveal style="--i:3">
+      <section class="card card--fill" data-reveal style="--i:3">
         <header class="card__head"><div class="card__title">时段分布</div><span class="card__sub" style="margin-left:auto">近 7 天</span></header>
         <div class="card__body" id="hourly-chart"></div>
       </section>
 
-      <section class="card" data-reveal style="--i:4">
+      <section class="card card--fill" data-reveal style="--i:4">
         <header class="card__head"><div class="card__title">支付方式</div><span class="card__sub" style="margin-left:auto">近 30 天</span></header>
         <div class="card__body" id="payment-chart">
-          <div class="skeleton" style="height:150px;border-radius:14px"></div>
+          <div class="skeleton" style="height:140px"></div>
         </div>
       </section>
     </div>
@@ -188,7 +188,7 @@ function kpiCard({ label, icon: iconName, value, prefix = '', suffix = '', decim
 function deltaChip(n) {
   if (Math.abs(n) < 0.0005) return `<span class="delta delta--flat">持平</span>`;
   const up = n > 0;
-  return `<span class="delta delta--${up ? 'up' : 'down'}">${icon(up ? 'arrowUp' : 'arrowDown', 11)}${signedPct(n)}</span>`;
+  return `<span class="delta delta--${up ? 'up' : 'down'}">${icon(up ? 'arrowUp' : 'arrowDown', 9)}${signedPct(n)}</span>`;
 }
 
 /* --------------------------------------------------------------- 趋势图 */
@@ -216,26 +216,37 @@ async function loadCategories() {
     if (!box) return;
 
     if (!data.items.length) {
-      box.innerHTML = `<div class="empty"><div class="empty__art">📊</div><div class="empty__title">暂无销售数据</div></div>`;
+      box.innerHTML = `<div class="empty"><div class="empty__art">∅</div><div class="empty__title">暂无销售数据</div></div>`;
       return;
     }
 
+    const total = data.items.reduce((sum, c) => sum + c.revenue, 0);
+
     box.innerHTML = `
-      <div class="donut">
-        ${donutChart(data.items)}
-        <div class="donut-list">
-          ${data.items
-            .map(
-              (c) => `
-            <div class="donut-list__row">
-              <i style="background:${c.color};width:8px;height:8px;border-radius:2px"></i>
-              <span class="donut-list__name">${escapeHtml(c.name)}</span>
-              <span class="donut-list__val">${money(c.revenue)}</span>
-              <div class="donut-list__bar"><i style="width:${(c.share * 100).toFixed(1)}%;background:${c.color}"></i></div>
-            </div>`
-            )
-            .join('')}
-        </div>
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <span class="label">30 天商品营收 · 未扣优惠</span>
+        <span class="mono" style="font-size:15px">${money(total)}</span>
+      </div>
+      <div class="catbar">
+        ${data.items
+          .map(
+            (c) =>
+              `<span class="catbar__seg" style="width:${(c.share * 100).toFixed(2)}%;background:${c.color}" title="${escapeHtml(c.name)} ${pct(c.share)}"></span>`
+          )
+          .join('')}
+      </div>
+      <div class="cat-list">
+        ${data.items
+          .map(
+            (c) => `
+          <div class="cat-row">
+            <span class="cat-row__swatch" style="background:${c.color}"></span>
+            <span class="cat-row__name">${escapeHtml(c.name)}</span>
+            <span class="cat-row__pct">${pct(c.share)}</span>
+            <span class="cat-row__val">${money(c.revenue)}</span>
+          </div>`
+          )
+          .join('')}
       </div>`;
   } catch (err) {
     console.error(err);
@@ -255,7 +266,6 @@ async function loadTop() {
           (p) => `
         <div class="rank-row">
           <span class="rank-row__no">${String(p.rank).padStart(2, '0')}</span>
-          <span class="rank-row__emoji">${p.emoji}</span>
           <div style="min-width:0">
             <div class="rank-row__name truncate">${escapeHtml(p.name)}</div>
             <div class="rank-row__meta">售出 ${p.qty} 份 · 占比 ${pct(p.share)}</div>
@@ -287,13 +297,13 @@ async function loadHourly() {
             (h, i) => `
           <div class="bars__col" title="${h.hour}:00 · ${h.orders} 单 · ${money(h.revenue)}">
             <div class="bars__fill" style="height:${Math.max((h.orders / max) * 100, 3)}%;--i:${i}"></div>
-            <span class="bars__x">${h.hour}</span>
+            <span class="bars__x">${h.hour % 2 === 0 ? h.hour : ''}</span>
           </div>`
           )
           .join('')}
       </div>
-      <div class="row" style="margin-top:12px;justify-content:space-between">
-        <span class="dim" style="font-size:11.5px">高峰时段</span>
+      <div class="row hourly__foot" style="justify-content:space-between">
+        <span class="label">高峰时段</span>
         <span class="badge badge--brand">${peak.hour}:00 · ${peak.orders} 单</span>
       </div>`;
   } catch (err) {
@@ -309,34 +319,33 @@ async function loadPayments() {
     if (!box) return;
 
     const meta = {
-      wechat: { name: '微信支付', emoji: '💚' },
-      alipay: { name: '支付宝', emoji: '🔵' },
-      cash: { name: '现金', emoji: '💵' },
-      card: { name: '银行卡', emoji: '💳' },
+      wechat: '微信支付',
+      alipay: '支付宝',
+      cash: '现金',
+      card: '银行卡',
     };
 
     const total = data.items.reduce((sum, i) => sum + i.revenue, 0) || 1;
+    const top = Math.max(...data.items.map((i) => i.revenue), 1);
 
     box.innerHTML = `
-      <div class="stack" style="gap:14px">
+      <div class="pay-list">
         ${data.items
-          .map((p) => {
-            const m = meta[p.method] ?? { name: p.method, emoji: '—' };
+          .map((p, i) => {
+            const share = p.revenue / total;
             return `
-          <div>
-            <div class="row" style="justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:12.5px">${m.emoji} ${m.name}</span>
-              <span class="num" style="font-size:12px;font-weight:600">${money(p.revenue)}
-                <span class="dim" style="font-weight:400">${pct(p.revenue / total)}</span>
-              </span>
-            </div>
-            <div class="bar"><div class="bar__fill" style="width:${(p.revenue / total) * 100}%"></div></div>
+          <div class="pay-row">
+            <span class="pay-row__name">${escapeHtml(meta[p.method] ?? p.method)}</span>
+            <span class="pay-row__track">
+              <span class="pay-row__fill" style="width:${(p.revenue / top) * 100}%;--i:${i}"></span>
+            </span>
+            <span class="pay-row__val">${money(p.revenue)}<em>${pct(share)}</em></span>
           </div>`;
           })
           .join('')}
-        <div class="row" style="justify-content:space-between;padding-top:4px;border-top:1px solid var(--line)">
-          <span class="dim" style="font-size:11.5px">30 天总收款</span>
-          <span style="font-size:13px;font-weight:700">${money(total)}</span>
+        <div class="pay-total">
+          <span class="label">30 天总收款</span>
+          <span class="pay-total__val">${money(total)}</span>
         </div>
       </div>`;
   } catch (err) {

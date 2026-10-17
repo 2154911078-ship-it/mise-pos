@@ -1,106 +1,95 @@
 /* ============================================================================
-   tokens.css —— 设计令牌
-   一套变量驱动暗/亮双主题，所有组件只消费变量，不写死颜色。
+   tokens.css —— 编辑部式设计令牌
+   一套「纸与墨」的视觉语言：象牙纸底、墨黑文字、朱砂红单一强调色。
+   刻意不使用：渐变背景、玻璃模糊、卡片投影、大圆角。
    ========================================================================== */
 
 :root {
-  color-scheme: dark;
-
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
-
-  /* 画布 */
-  --bg: #08090c;
-  --bg-grad-1: rgba(255, 122, 69, 0.09);
-  --bg-grad-2: rgba(78, 205, 196, 0.07);
-  --grid-line: rgba(255, 255, 255, 0.022);
-
-  /* 层次 */
-  --panel: #111419;
-  --panel-2: #171b22;
-  --panel-3: #1d222b;
-  --line: rgba(255, 255, 255, 0.068);
-  --line-strong: rgba(255, 255, 255, 0.13);
-  --overlay: rgba(4, 5, 8, 0.68);
-
-  /* 文本 */
-  --text: #f3f5f9;
-  --text-2: #a5adbd;
-  --text-3: #6b7382;
-
-  /* 品牌与语义 */
-  --brand: #ff7a45;
-  --brand-2: #ff5a2e;
-  --brand-soft: rgba(255, 122, 69, 0.14);
-  --mint: #4ecdc4;
-  --mint-soft: rgba(78, 205, 196, 0.14);
-  --violet: #a78bfa;
-  --amber: #ffc857;
-  --rose: #ff6b81;
-  --green: #3ddc97;
-  --blue: #5aa9ff;
-
-  /* 阴影 */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 18px 44px -18px rgba(0, 0, 0, 0.9);
-  --shadow-3: 0 32px 80px -28px rgba(0, 0, 0, 0.95);
-  --glow-brand: 0 0 0 1px rgba(255, 122, 69, 0.35), 0 16px 48px -16px rgba(255, 122, 69, 0.5);
-
-  /* 形状 */
-  --r-xs: 8px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 26px;
-  --r-pill: 999px;
-
-  /* 动效曲线 */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --dur-fast: 160ms;
-  --dur: 300ms;
-  --dur-slow: 560ms;
-
-  /* 布局 */
-  --sidebar-w: 236px;
-  --topbar-h: 68px;
-  --max-w: 1560px;
-}
-
-[data-theme='light'] {
   color-scheme: light;
 
-  --bg: #f2f1ed;
-  --bg-grad-1: rgba(255, 122, 69, 0.16);
-  --bg-grad-2: rgba(78, 205, 196, 0.12);
-  --grid-line: rgba(20, 22, 28, 0.045);
+  /* 三套字体各司其职：标题衬线、正文无衬线、数字等宽 */
+  --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun",
+    Georgia, "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Roboto Mono", Consolas, "Courier New", monospace;
 
-  --panel: #ffffff;
-  --panel-2: #fbfaf8;
-  --panel-3: #f2f0ec;
-  --line: rgba(20, 22, 28, 0.09);
-  --line-strong: rgba(20, 22, 28, 0.16);
-  --overlay: rgba(24, 22, 20, 0.36);
+  /* 纸 */
+  --bg: #f5f2eb;
+  --bg-2: #ece7db;
+  --panel: #f5f2eb;
+  --panel-2: #ece7db;
+  --panel-3: #e2dccd;
 
-  --text: #16181d;
-  --text-2: #5d6472;
-  --text-3: #8d94a1;
+  /* 墨与线 */
+  --ink: #16150f;
+  --text: #16150f;
+  --text-2: #4b463b;
+  --text-3: #8a8373;
+  --line: #d7d1c2;
+  --line-2: #c3bcab;
+  --line-strong: #16150f;
 
-  --brand: #f05a22;
-  --brand-2: #d94a15;
-  --brand-soft: rgba(240, 90, 34, 0.1);
-  --mint: #17a79c;
-  --mint-soft: rgba(23, 167, 156, 0.1);
-  --violet: #7c5cf0;
-  --amber: #d99a12;
-  --rose: #e04a63;
-  --green: #17a86b;
-  --blue: #2f7fe0;
+  /* 朱砂红：全站唯一强调色 */
+  --brand: #c1442e;
+  --brand-2: #a3341f;
+  --brand-soft: rgba(193, 68, 46, 0.09);
 
-  --shadow-1: 0 1px 2px rgba(20, 22, 28, 0.06);
-  --shadow-2: 0 14px 34px -18px rgba(20, 22, 28, 0.24);
-  --shadow-3: 0 30px 70px -30px rgba(20, 22, 28, 0.3);
-  --glow-brand: 0 0 0 1px rgba(240, 90, 34, 0.28), 0 16px 40px -18px rgba(240, 90, 34, 0.4);
+  /* 语义色（低饱和，避免与强调色抢戏） */
+  --mint: #2f5d4a;
+  --mint-soft: rgba(47, 93, 74, 0.09);
+  --amber: #8f6112;
+  --rose: #a83232;
+  --green: #2f6b4f;
+  --blue: #2b4f7a;
+  --violet: #5b4a7a;
+
+  --overlay: rgba(22, 21, 15, 0.42);
+  --shadow-2: 0 20px 46px -28px rgba(22, 21, 15, 0.5);
+  --shadow-3: 0 36px 80px -36px rgba(22, 21, 15, 0.55);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur: 280ms;
+  --dur-slow: 520ms;
+
+  --masthead-h: 76px;
+  --status-h: 26px;
+  --max-w: 1520px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #121110;
+  --bg-2: #1a1815;
+  --panel: #121110;
+  --panel-2: #1a1815;
+  --panel-3: #232019;
+
+  --ink: #f0ece1;
+  --text: #f0ece1;
+  --text-2: #b2ac9d;
+  --text-3: #7c7768;
+  --line: #2e2a23;
+  --line-2: #423d33;
+  --line-strong: #f0ece1;
+
+  --brand: #e0603f;
+  --brand-2: #f0795a;
+  --brand-soft: rgba(224, 96, 63, 0.12);
+
+  --mint: #6fae91;
+  --mint-soft: rgba(111, 174, 145, 0.1);
+  --amber: #d0a05a;
+  --rose: #d97b7b;
+  --green: #6fae91;
+  --blue: #8ab0d8;
+  --violet: #a596c9;
+
+  --overlay: rgba(6, 6, 5, 0.66);
+  --shadow-2: 0 20px 46px -28px rgba(0, 0, 0, 0.9);
+  --shadow-3: 0 36px 80px -36px rgba(0, 0, 0, 0.95);
 }

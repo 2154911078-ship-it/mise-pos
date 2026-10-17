@@ -4,11 +4,11 @@
 -- ============================================================================
 
 INSERT INTO categories (id, name, color, sort_order) VALUES
-  (1, '咖啡',   '#FF7A45', 1),
-  (2, '茶饮',   '#4ECDC4', 2),
-  (3, '简餐',   '#FFC857', 3),
-  (4, '甜点',   '#C792EA', 4),
-  (5, '小食',   '#7ED957', 5);
+  (1, '咖啡',   '#A8562F', 1),   -- 赭石
+  (2, '茶饮',   '#4E7A68', 2),   -- 松绿
+  (3, '简餐',   '#B08A3E', 3),   -- 芥黄
+  (4, '甜点',   '#8A6A8E', 4),   -- 灰紫
+  (5, '小食',   '#6E7A4A', 5);   -- 橄榄
 
 INSERT INTO products (sku, name, category_id, price_cents, cost_cents, stock, low_stock, unit, emoji, sort_order) VALUES
   ('CF-001', '美式咖啡',       1, 2200,  700,  86, 20, '杯', '☕', 1),

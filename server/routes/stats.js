@@ -236,7 +236,8 @@ export default function statsRouter(db) {
           `SELECT payment_method AS method, COUNT(*) AS orders, SUM(total_cents) AS revenue
            FROM v_paid_orders
            WHERE biz_date >= date('now', 'localtime', @offset)
-           GROUP BY payment_method`
+           GROUP BY payment_method
+           ORDER BY revenue DESC`
         )
         .all({ offset: dayRange(days) });
 

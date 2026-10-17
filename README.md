@@ -34,6 +34,21 @@
 
 ---
 
+## 设计语言
+
+界面刻意避开「后台模板」的通用语汇（深色卡片、玻璃模糊、渐变按钮、大圆角），改从**纸质菜单与编辑部版面**里取形：
+
+- **底色是纸**：象牙白 `#F5F2EB`，墨色文字 `#16150F`，朱砂红 `#C1442E` 是全站唯一强调色
+- **没有圆角、没有投影、没有模糊**：所有层级只靠 `1px` 细线与留白区分
+- **三套字体各司其职**：宋体做标题与金额（有印刷感），等宽体做编号、SKU、时间，无衬线体做正文
+- **点线引导**：菜名与价格之间用 `dotted leader` 对齐，直接来自纸质菜单的排版习惯
+- **横向报头 + 底部状态栏**：替代常见的「左侧栏 + 卡片网格」，更像一份报纸而不是一个后台
+- **暗色主题不是反色**：纸 → 墨，朱砂红保持不变，仍是同一套版面
+
+全部由 `public/styles/tokens.css` 里的设计令牌驱动，改一行变量即可换肤。
+
+---
+
 ## 功能
 
 **点单收银**
@@ -44,7 +59,7 @@
 
 **经营分析**
 - 今日营收 / 单量 / 客单价 / 毛利率，同比昨日与近 7 天环比
-- 14 天营收趋势（可切 7 / 30 天）、品类结构环形图、时段分布、支付方式占比
+- 14 天营收趋势（可切 7 / 30 天）、品类结构堆叠占比条、时段分布、支付方式占比
 - 畅销商品 Top 8、低库存预警
 
 **商品库存**
@@ -71,7 +86,7 @@
 | 实时 | Server-Sent Events | 单向推送足够，自动重连，比 WebSocket 省事 |
 | 前端 | 原生 ES Modules | 自研 60 行 store + hash 路由，零依赖 |
 | 图表 | 手写 SVG | Catmull-Rom 转贝塞尔，样式跟随 CSS 变量 |
-| 动效 | CSS + WAAPI | View Transitions、FLIP、涟漪、飞入 |
+| 动效 | CSS + WAAPI | View Transitions、FLIP、描边绘制、遮罩上滑 |
 
 生产依赖只有两个：`express`、`better-sqlite3`。
 
@@ -260,14 +275,15 @@ curl -s localhost:3000/api/stats/overview -H "Authorization: Bearer $TOKEN" | jq
 | 场景 | 实现 |
 | --- | --- |
 | 页面切换 | `document.startViewTransition` + `::view-transition-*`，不支持时降级为 fade-up |
-| 加入购物车 | 克隆 emoji 小球，WAAPI 沿贝塞尔抛物线飞入右栏 |
+| 加入购物车 | 条目以 `print-in` 逐行「打印」进小票：`clip-path` 由上往下揭示 |
 | 购物车重排 | FLIP：记录首末位置，反推 `translate` 后回放 |
 | 金额变化 | `requestAnimationFrame` + easeOutCubic 数字滚动 |
 | 图表入场 | `stroke-dashoffset` 描边绘制，柱状图 `scaleY` 逐条生长 |
 | 列表入场 | IntersectionObserver + `--i` 变量做 stagger |
-| 侧栏高亮 | 单个 indicator 元素 `translateY` 滑动，而非每项切换背景 |
-| 按钮 | 指针位置计算涟漪 + `:active` 缩放 |
-| 卡片 | 鼠标坐标写入 `--mx/--my`，径向渐变做跟随光斑 |
+| 报头导航 | 编号 + 朱砂红下划线，`scaleX` 自左展开；编号先变红再变字色 |
+| 标题入场 | `mask-up`：`clip-path` 遮罩内整体上滑，模拟活字上版 |
+| 按钮 | 指针位置计算涟漪；主按钮 `::before` 自下往上填充扫过 |
+| 按钮按下 | `:active` 轻微下压，`transition` 用 spring 曲线 |
 
 全站遵循 `prefers-reduced-motion`：系统开启「减少动态效果」后，所有动画降到 0.001ms，功能不受影响。
 

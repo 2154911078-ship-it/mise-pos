@@ -74,11 +74,14 @@ export const STATUS = {
 };
 
 export const PAYMENT = {
-  cash: { text: '现金', emoji: '💵' },
-  wechat: { text: '微信支付', emoji: '💚' },
-  alipay: { text: '支付宝', emoji: '🔵' },
-  card: { text: '银行卡', emoji: '💳' },
+  cash: { text: '现金', abbr: '现', mark: '▤' },
+  wechat: { text: '微信支付', abbr: '微', mark: '◉' },
+  alipay: { text: '支付宝', abbr: '支', mark: '◈' },
+  card: { text: '银行卡', abbr: '卡', mark: '▭' },
 };
 
+/** 收款弹窗里的固定顺序：先扫码，再现金、刷卡 */
+export const PAYMENT_LIST = ['wechat', 'alipay', 'cash', 'card'].map((key) => ({ key, ...PAYMENT[key] }));
+
 export const statusMeta = (s) => STATUS[s] ?? { text: s, cls: 'badge--flat' };
-export const paymentMeta = (m) => PAYMENT[m] ?? { text: '未支付', emoji: '—' };
+export const paymentMeta = (m) => PAYMENT[m] ?? { text: '未支付', abbr: '—', mark: '·' };

@@ -3,7 +3,7 @@
  */
 import { api } from '../api.js';
 import { icon } from '../icons.js';
-import { money, dateTime, timeHM, statusMeta, paymentMeta, relative } from '../format.js';
+import { money, dateTime, timeHM, statusMeta, paymentMeta, relative, PAYMENT_LIST } from '../format.js';
 import { escapeHtml, toast, openDrawer, confirmDialog, openModal, animateNumber } from '../ui.js';
 
 export const meta = { title: '账单流水', eyebrow: 'ORDERS' };
@@ -122,7 +122,7 @@ async function load() {
     if (!data.orders.length) {
       tbody.innerHTML = `<tr><td colspan="7">
         <div class="empty">
-          <div class="empty__art">🗂</div>
+          <div class="empty__art">∅</div>
           <div class="empty__title">没有符合条件的账单</div>
           <div class="empty__desc">试试切换状态或清空搜索条件</div>
         </div>
@@ -144,13 +144,13 @@ async function load() {
           <td>${o.tableNo ? `<span class="badge badge--flat">${escapeHtml(o.tableNo)}</span>` : '<span class="dim">—</span>'}</td>
           <td><div class="order-items-mini">${escapeHtml(o.itemsSummary || '—')}</div></td>
           <td class="cell-num cell-strong">${money(o.total)}</td>
-          <td>${o.paymentMethod ? `${pay.emoji} ${pay.text}` : '<span class="dim">未支付</span>'}</td>
+          <td>${o.paymentMethod ? `<span class="pay-mark">${pay.abbr}</span><span class="pay-name">${pay.text}</span>` : '<span class="dim">未支付</span>'}</td>
           <td><span class="badge ${st.cls}">${st.text}</span></td>
         </tr>`;
       })
       .join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty__art">⚠️</div><div class="empty__title">加载失败</div><div class="empty__desc">${escapeHtml(err.message)}</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty__art">!</div><div class="empty__title">加载失败</div><div class="empty__desc">${escapeHtml(err.message)}</div></div></td></tr>`;
   }
 }
 
@@ -177,16 +177,16 @@ async function openDetail(id) {
       <span class="badge ${st.cls}" style="margin-left:auto">${st.text}</span>
     </div>
 
-    <div class="card card--pad" style="background:var(--panel-2);margin-bottom:18px">
-      <div class="row" style="justify-content:space-between;margin-bottom:8px">
-        <span class="dim" style="font-size:11.5px">应收金额</span>
-        <span class="cart__total-value" style="font-size:26px">${money(order.total)}</span>
+    <div style="border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:14px 0;margin-bottom:22px">
+      <div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <span class="label">应收金额</span>
+        <span class="receipt__total-value">${money(order.total)}</span>
       </div>
-      <div class="cart__line"><span>小计</span><span class="num">${money(order.subtotal)}</span></div>
-      ${order.discount ? `<div class="cart__line"><span>优惠</span><span class="num" style="color:var(--brand)">-${money(order.discount)}</span></div>` : ''}
-      <div class="cart__line"><span>支付方式</span><span>${paymentMeta(order.paymentMethod).text}</span></div>
-      ${order.tableNo ? `<div class="cart__line"><span>桌号</span><span>${escapeHtml(order.tableNo)}</span></div>` : ''}
-      ${order.note ? `<div class="cart__line"><span>备注</span><span>${escapeHtml(order.note)}</span></div>` : ''}
+      <div class="receipt__sum"><span>小计</span><span>${money(order.subtotal)}</span></div>
+      ${order.discount ? `<div class="receipt__sum"><span>优惠</span><span style="color:var(--brand)">-${money(order.discount)}</span></div>` : ''}
+      <div class="receipt__sum"><span>支付方式</span><span>${paymentMeta(order.paymentMethod).text}</span></div>
+      ${order.tableNo ? `<div class="receipt__sum"><span>桌号</span><span>${escapeHtml(order.tableNo)}</span></div>` : ''}
+      ${order.note ? `<div class="receipt__sum"><span>备注</span><span>${escapeHtml(order.note)}</span></div>` : ''}
     </div>
 
     <div class="card__title" style="margin-bottom:10px">商品明细</div>
@@ -277,12 +277,7 @@ async function openDetail(id) {
 }
 
 function openPayDialog(order, onDone) {
-  const methods = [
-    { key: 'wechat', name: '微信支付', emoji: '💚' },
-    { key: 'alipay', name: '支付宝', emoji: '🔵' },
-    { key: 'cash', name: '现金', emoji: '💵' },
-    { key: 'card', name: '银行卡', emoji: '💳' },
-  ];
+  const methods = PAYMENT_LIST;
   let method = 'wechat';
 
   openModal({
@@ -290,14 +285,14 @@ function openPayDialog(order, onDone) {
     subtitle: order.orderNo,
     width: 420,
     body: `
-      <div style="text-align:center;padding:4px 0 16px">
-        <div class="cart__total-value" style="font-size:34px">${money(order.total)}</div>
+      <div style="text-align:center;padding:4px 0 18px">
+        <div class="receipt__total-value" style="font-size:38px">${money(order.total)}</div>
       </div>
       <div class="pay-grid">
         ${methods
           .map(
             (m) => `<button class="pay-opt ${m.key === method ? 'is-active' : ''}" data-method="${m.key}">
-              <span class="pay-opt__icon">${m.emoji}</span><span class="pay-opt__name">${m.name}</span>
+              <span class="pay-opt__icon">${m.mark}</span><span class="pay-opt__name">${m.text}</span>
             </button>`
           )
           .join('')}

@@ -151,7 +151,7 @@ export function confirmDialog({ title, message, confirmText = '确认', danger =
   });
 }
 
-/* -------------------------------------------------------------- 涟漪/光斑 */
+/* -------------------------------------------------------------- 涟漪 */
 document.addEventListener('pointerdown', (e) => {
   const target = e.target.closest('.btn, .chip, .pos__cat, .pay-opt');
   if (!target || target.hasAttribute('disabled')) return;
@@ -164,14 +164,6 @@ document.addEventListener('pointerdown', (e) => {
   span.style.top = `${e.clientY - rect.top - size / 2}px`;
   target.append(span);
   setTimeout(() => span.remove(), 640);
-});
-
-document.addEventListener('pointermove', (e) => {
-  const target = e.target.closest('.spotlight, .product');
-  if (!target) return;
-  const rect = target.getBoundingClientRect();
-  target.style.setProperty('--mx', `${e.clientX - rect.left}px`);
-  target.style.setProperty('--my', `${e.clientY - rect.top}px`);
 });
 
 /* ------------------------------------------------------------- 入场观察器 */

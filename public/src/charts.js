@@ -35,8 +35,8 @@ export function areaChart(points, { height = 250, color = 'var(--brand)', id = '
     .map((t) => {
       const y = pad.t + plotH - t * plotH;
       return `
-        <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="var(--line)" stroke-width="1" stroke-dasharray="${t === 0 ? '0' : '3 5'}"/>
-        <text x="${pad.l - 10}" y="${y + 4}" text-anchor="end" font-size="10" fill="var(--text-3)">${compactMoney(max * t)}</text>`;
+        <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="var(--line)" stroke-width="1" stroke-dasharray="${t === 0 ? '0' : '2 4'}"/>
+        <text x="${pad.l - 10}" y="${y + 3}" text-anchor="end" font-size="9" fill="var(--text-3)">${compactMoney(max * t)}</text>`;
     })
     .join('');
 
@@ -44,22 +44,22 @@ export function areaChart(points, { height = 250, color = 'var(--brand)', id = '
   const xLabels = points
     .map((p, i) =>
       i % labelEvery === 0 || i === points.length - 1
-        ? `<text x="${coords[i].x}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--text-3)">${dateMD(p.day + 'T00:00:00')}</text>`
+        ? `<text x="${coords[i].x}" y="${H - 6}" text-anchor="middle" font-size="9" fill="var(--text-3)">${dateMD(p.day + 'T00:00:00')}</text>`
         : ''
     )
     .join('');
 
   const hover = coords
     .map(
-      (c, i) => `
+      (c) => `
       <g class="chart-pt">
         <rect x="${c.x - stepX / 2}" y="${pad.t}" width="${Math.max(stepX, 10)}" height="${plotH}" fill="transparent"/>
-        <line x1="${c.x}" y1="${pad.t}" x2="${c.x}" y2="${pad.t + plotH}" stroke="var(--line-strong)" stroke-width="1" class="chart-cross"/>
-        <circle cx="${c.x}" cy="${c.y}" r="3.5" fill="${color}" stroke="var(--panel)" stroke-width="2" class="chart-dot"/>
-        <g class="chart-tip" transform="translate(${c.x},${Math.max(c.y - 12, 30)})">
-          <rect x="-46" y="-32" width="92" height="28" rx="8" fill="var(--panel-3)" stroke="var(--line-strong)"/>
-          <text x="0" y="-17" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--text)">${money(c.revenue)}</text>
-          <text x="0" y="-6" text-anchor="middle" font-size="9" fill="var(--text-3)">${c.orders} 单</text>
+        <line x1="${c.x}" y1="${pad.t}" x2="${c.x}" y2="${pad.t + plotH}" stroke="var(--line-2)" stroke-width="1" stroke-dasharray="2 3" class="chart-cross"/>
+        <circle cx="${c.x}" cy="${c.y}" r="3" fill="var(--brand)" class="chart-dot"/>
+        <g class="chart-tip" transform="translate(${c.x},${Math.max(c.y - 12, 34)})">
+          <rect x="-46" y="-32" width="92" height="28" fill="var(--bg)" stroke="var(--line-2)"/>
+          <text x="0" y="-18" text-anchor="middle" font-size="10" fill="var(--ink)">${money(c.revenue)}</text>
+          <text x="0" y="-8" text-anchor="middle" font-size="8.5" fill="var(--text-3)">${c.orders} 单</text>
         </g>
       </g>`
     )
@@ -69,18 +69,13 @@ export function areaChart(points, { height = 250, color = 'var(--brand)', id = '
     <svg viewBox="0 0 ${W} ${H}" class="chart__svg" role="img" aria-label="营收趋势图">
       <defs>
         <linearGradient id="${id}-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.32"/>
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.13"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="${id}-line" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.55"/>
-          <stop offset="55%" stop-color="${color}"/>
-          <stop offset="100%" stop-color="var(--mint)"/>
         </linearGradient>
       </defs>
       ${grid}
       <path d="${areaPath}" fill="url(#${id}-fill)" class="chart__area"/>
-      <path d="${linePath}" fill="none" stroke="url(#${id}-line)" stroke-width="2.4" stroke-linecap="round" class="chart__line"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" class="chart__line"/>
       ${xLabels}
       ${hover}
     </svg>`;

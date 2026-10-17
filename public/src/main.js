@@ -1,6 +1,6 @@
 /**
  * main.js —— 应用入口。
- * 负责：登录态判定、外壳渲染、路由、实时事件、全局快捷键。
+ * 外壳结构：横向报头（masthead）+ 版面（view）+ 状态栏（statusbar）。
  */
 import { api, session, subscribeEvents } from './api.js';
 import { icon } from './icons.js';
@@ -24,17 +24,11 @@ const VIEWS = {
 };
 
 const NAV = [
-  { group: '营业', items: [
-    { key: 'pos', label: '点单台', icon: 'pos' },
-    { key: 'orders', label: '账单流水', icon: 'receipt' },
-  ] },
-  { group: '分析', items: [
-    { key: 'dashboard', label: '经营看板', icon: 'chart' },
-  ] },
-  { group: '管理', items: [
-    { key: 'inventory', label: '商品库存', icon: 'box' },
-    { key: 'settings', label: '设置', icon: 'settings' },
-  ] },
+  { key: 'pos', label: '点单', no: '01' },
+  { key: 'orders', label: '账单', no: '02' },
+  { key: 'dashboard', label: '看板', no: '03' },
+  { key: 'inventory', label: '库存', no: '04' },
+  { key: 'settings', label: '设置', no: '05' },
 ];
 
 const app = document.getElementById('app');
@@ -100,76 +94,57 @@ function renderShell() {
 
   app.className = 'app';
   app.innerHTML = `
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand__mark">${icon('coffee', 20)}</span>
-        <div class="brand__text">
-          <div class="brand__name">MISE</div>
-          <div class="brand__sub" id="brand-sub">${settings.store_name || '门店经营台'}</div>
-        </div>
-      </div>
+    <header class="masthead">
+      <a class="masthead__brand" href="#/pos">
+        <span class="masthead__mark">Mise<i>.</i></span>
+        <span class="masthead__sub" id="brand-sub">${settings.store_name || '门店经营台'}</span>
+      </a>
 
-      <nav class="nav" id="nav">
-        <span class="nav-indicator" id="nav-indicator"></span>
+      <nav class="masthead__nav" id="nav" aria-label="主导航">
         ${NAV.map(
-          (section) => `
-          <div class="nav__label">${section.group}</div>
-          ${section.items
-            .map(
-              (item) => `
-            <a class="nav-item" href="#/${item.key}" data-nav="${item.key}">
-              ${icon(item.icon, 17)}<span>${item.label}</span>
-              ${item.key === 'orders' ? '<span class="nav-item__badge" id="open-badge" hidden>0</span>' : ''}
-            </a>`
-            )
-            .join('')}`
+          (item) => `
+          <a class="mnav" href="#/${item.key}" data-nav="${item.key}">
+            <span class="mnav__no">${item.no}</span>${item.label}
+            ${item.key === 'orders' ? '<span class="mnav__badge" id="open-badge" hidden>0</span>' : ''}
+          </a>`
         ).join('')}
       </nav>
 
-      <div class="sidebar__foot">
-        <div class="conn" id="conn">
-          <span class="conn__dot"></span>
-          <span id="conn-text">连接中…</span>
+      <div class="masthead__meta">
+        <div class="masthead__clock">
+          <span class="masthead__time" id="clock">--:--</span>
+          <span class="masthead__date" id="today">—</span>
         </div>
-        <button class="userchip" id="userchip" title="退出登录">
+        <div class="masthead__actions">
+          <button class="ghost-btn" id="theme-btn" title="切换主题">${icon(store.state.theme === 'dark' ? 'sun' : 'moon', 16)}</button>
+          <button class="ghost-btn" id="refresh-btn" title="刷新数据">${icon('refresh', 16)}</button>
+        </div>
+        <button class="masthead__user" id="userchip" title="退出登录">
           <span class="avatar">${(user?.name || 'U').slice(0, 1)}</span>
-          <span class="userchip__meta">
-            <span class="userchip__name">${user?.name || '未知用户'}</span>
-            <span class="userchip__role">${user?.role === 'owner' ? '店长' : '收银员'}</span>
-          </span>
+          <span>${user?.name || '未知'}</span>
         </button>
       </div>
-    </aside>
+    </header>
 
     <main class="main">
-      <header class="topbar">
-        <div class="topbar__title">
-          <span class="topbar__eyebrow" id="top-eyebrow">ORDER</span>
-          <h1 class="topbar__heading" id="top-heading">点单台</h1>
-        </div>
-        <div class="topbar__spacer"></div>
-        <div class="topbar__clock">
-          <span class="topbar__time" id="clock">--:--</span>
-          <span class="topbar__date" id="today">—</span>
-        </div>
-        <button class="icon-btn" id="theme-btn" title="切换主题">${icon(store.state.theme === 'dark' ? 'sun' : 'moon', 17)}</button>
-        <button class="icon-btn" id="refresh-btn" title="刷新数据">${icon('refresh', 17)}</button>
-      </header>
       <div class="view" id="view"></div>
-    </main>`;
+    </main>
 
-  shell = {
-    view: app.querySelector('#view'),
-    indicator: app.querySelector('#nav-indicator'),
-    heading: app.querySelector('#top-heading'),
-    eyebrow: app.querySelector('#top-eyebrow'),
-  };
+    <footer class="statusbar" id="statusbar">
+      <span class="statusbar__item"><i class="statusbar__dot"></i><span id="conn-text">连接中</span></span>
+      <span class="statusbar__item" id="status-orders">待结账 0</span>
+      <span class="statusbar__item">SQLite · WAL</span>
+      <span class="statusbar__spacer"></span>
+      <span class="statusbar__item">${settings.store_slogan || '现磨手冲 · 每日新鲜烘焙'}</span>
+      <span class="statusbar__item"><kbd>1</kbd>–<kbd>5</kbd> 切换</span>
+    </footer>`;
+
+  shell = { view: app.querySelector('#view') };
 
   app.querySelector('#theme-btn').addEventListener('click', () => {
     const next = store.state.theme === 'dark' ? 'light' : 'dark';
     store.setTheme(next);
-    app.querySelector('#theme-btn').innerHTML = icon(next === 'dark' ? 'sun' : 'moon', 17);
-    toast(next === 'dark' ? '已切换深色模式' : '已切换浅色模式', 'info', 1800);
+    app.querySelector('#theme-btn').innerHTML = icon(next === 'dark' ? 'sun' : 'moon', 16);
   });
 
   app.querySelector('#refresh-btn').addEventListener('click', async (e) => {
@@ -221,17 +196,21 @@ async function route({ silent = false } = {}) {
   const first = currentKey === null;
   currentKey = key;
 
-  if (shell.heading) shell.heading.textContent = view.meta.title;
-  if (shell.eyebrow) shell.eyebrow.textContent = view.meta.eyebrow;
-
-  // 侧栏高亮 + 指示器
   app.querySelectorAll('[data-nav]').forEach((el) => el.classList.toggle('is-active', el.dataset.nav === key));
-  moveIndicator();
+
+  const head =
+    key === 'pos'
+      ? ''
+      : `<div class="page-head">
+           <span class="page-head__no">${NAV.find((n) => n.key === key)?.no ?? '00'}</span>
+           <h1 class="page-head__title">${view.meta.title}</h1>
+           <span class="page-head__eyebrow">${view.meta.eyebrow}</span>
+         </div>`;
 
   const html = view.render(ctx);
   const apply = () => {
     shell.view.className = `view${key === 'pos' ? ' view--flush' : ''}`;
-    shell.view.innerHTML = html;
+    shell.view.innerHTML = head + html;
   };
 
   if (!silent && !first && document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -249,16 +228,6 @@ async function route({ silent = false } = {}) {
   view.mount?.(shell.view, ctx);
   observeReveal(shell.view);
   hydrateCounters(shell.view);
-  moveIndicator();
-}
-
-function moveIndicator() {
-  const active = app.querySelector('.nav-item.is-active');
-  const indicator = shell?.indicator;
-  if (!active || !indicator) return;
-  indicator.style.transform = `translateY(${active.offsetTop}px)`;
-  indicator.style.height = `${active.offsetHeight}px`;
-  indicator.classList.add('is-on');
 }
 
 window.addEventListener('hashchange', () => route());
@@ -271,7 +240,9 @@ function startClock() {
     const clock = document.getElementById('clock');
     const today = document.getElementById('today');
     if (clock) clock.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    if (today) today.textContent = `${now.getMonth() + 1}月${now.getDate()}日 · 周${'日一二三四五六'[now.getDay()]}`;
+    if (today) {
+      today.textContent = `${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} 周${'日一二三四五六'[now.getDay()]}`;
+    }
   };
   tick();
   clockTimer = setInterval(tick, 15000);
@@ -305,10 +276,13 @@ function refreshBrand() {
 
 function updateOpenBadge() {
   const badge = document.getElementById('open-badge');
-  if (!badge) return;
+  const status = document.getElementById('status-orders');
   const count = store.state.pendingOrders;
-  badge.hidden = !count;
-  badge.textContent = count;
+  if (badge) {
+    badge.hidden = !count;
+    badge.textContent = count;
+  }
+  if (status) status.textContent = `待结账 ${count}`;
 }
 
 /* ------------------------------------------------------------- 实时事件 */
@@ -316,16 +290,16 @@ function startLive() {
   if (unsubscribeSSE) return;
 
   const setConn = (state, text) => {
-    const el = document.getElementById('conn');
+    const bar = document.getElementById('statusbar');
     const label = document.getElementById('conn-text');
-    if (!el) return;
-    el.classList.toggle('is-live', state === 'live');
-    el.classList.toggle('is-off', state === 'off');
+    if (!bar) return;
+    bar.classList.toggle('is-live', state === 'live');
+    bar.classList.toggle('is-off', state === 'off');
     if (label) label.textContent = text;
   };
 
   unsubscribeSSE = subscribeEvents({
-    hello: () => setConn('live', '实时连接正常'),
+    hello: () => setConn('live', '实时连接'),
     'order:created': (order) => {
       store.set({ pendingOrders: store.state.pendingOrders + 1 });
       updateOpenBadge();
@@ -337,14 +311,14 @@ function startLive() {
     },
     'stock:low': (payload) => {
       const names = payload.items.map((i) => i.name).slice(0, 2).join('、');
-      toast(`库存预警：${names}${payload.items.length > 2 ? ' 等' : ''} 库存偏低`, 'warn', 4200);
+      toast(`库存预警：${names}${payload.items.length > 2 ? ' 等' : ''}`, 'warn', 4200);
     },
-    error: () => setConn('off', '连接已断开'),
+    error: () => setConn('off', '连接断开'),
   });
 
   setTimeout(() => {
-    if (document.getElementById('conn')?.classList.contains('is-live')) return;
-    setConn('off', '实时连接不可用');
+    if (document.getElementById('statusbar')?.classList.contains('is-live')) return;
+    setConn('off', '离线');
   }, 4000);
 }
 
@@ -383,4 +357,4 @@ window.addEventListener('mise:unauthorized', () => {
   toast('登录已过期，请重新登录', 'warn');
 });
 
-window.addEventListener('resize', () => moveIndicator());
+window.addEventListener('resize', () => {});
