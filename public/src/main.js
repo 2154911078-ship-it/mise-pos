@@ -71,6 +71,10 @@ async function boot() {
 
 function showLogin() {
   stopLive();
+  // 登录页没有外壳，把引用断开：退出登录时 location.hash 会被重置，
+  // 那个 hashchange 会触发一次 route()，若 shell 还指着已脱离文档的节点，
+  // 就会往幽灵 DOM 里渲染并跑一遍 mount()，凭空发起一轮请求。
+  shell = null;
   app.className = '';
   app.innerHTML = loginView.render();
   loginView.mount(app, ctx);
@@ -192,6 +196,10 @@ export function navigate(key) {
 }
 
 async function route({ silent = false } = {}) {
+  // 停在登录页时改 hash（手输地址、浏览器前进后退）不该渲染视图，
+  // 此时 shell 还没建起来，硬渲染会抛 null 引用。
+  if (!shell) return;
+
   const key = parseHash();
   const view = VIEWS[key];
   const first = currentKey === null;
