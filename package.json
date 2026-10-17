@@ -1,0 +1,32 @@
+{
+  "name": "mise-pos",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Mise · 轻量门店点单与经营系统 — Express + SQLite + 原生前端，零构建、开箱即跑。",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/api.test.js",
+    "db:reset": "node scripts/reset-db.js"
+  },
+  "keywords": [
+    "pos",
+    "point-of-sale",
+    "sqlite",
+    "express",
+    "vanilla-js",
+    "dashboard",
+    "restaurant"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "express": "^4.19.2"
+  }
+}

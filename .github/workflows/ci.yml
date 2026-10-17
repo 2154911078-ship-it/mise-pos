@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行测试
+        run: npm test
+        env:
+          NODE_ENV: test
+
+  smoke:
+    name: 启动冒烟测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - name: 启动并探活
+        run: |
+          node server/index.js &
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -sf http://localhost:3000/api/health; then
+              echo "\n服务启动成功"
+              exit 0
+            fi
+          done
+          echo "服务未能启动"
+          exit 1
