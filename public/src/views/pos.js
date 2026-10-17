@@ -7,6 +7,7 @@
 import { api } from '../api.js';
 import { icon } from '../icons.js';
 import { money, paymentMeta, PAYMENT_LIST } from '../format.js';
+import { productArt } from '../art.js';
 import { escapeHtml, flip, animateNumber, toast, openModal } from '../ui.js';
 
 export const meta = { title: '点单台', eyebrow: 'ORDER' };
@@ -182,6 +183,7 @@ function paintGrid() {
       return `
       <button class="menu-row ${soldout ? 'is-soldout' : ''}" data-product="${p.id}" style="--i:${Math.min(i, 16)}">
         <span class="menu-row__no">${String(i + 1).padStart(2, '0')}</span>
+        <span class="menu-row__art">${productArt(p.name, p.categoryName)}</span>
         <span class="menu-row__body">
           <span class="menu-row__name">${escapeHtml(p.name)}</span>
           <span class="menu-row__meta ${low ? 'is-low' : ''}">${escapeHtml(p.categoryName)} · ${soldout ? '售罄' : `余 ${p.stock}`}</span>

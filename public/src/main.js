@@ -140,8 +140,8 @@ function renderShell() {
       <span class="statusbar__item" id="status-orders">待结账 0</span>
       <span class="statusbar__item">SQLite · WAL</span>
       <span class="statusbar__spacer"></span>
-      <span class="statusbar__item">${settings.store_slogan || '现磨手冲 · 每日新鲜烘焙'}</span>
-      <span class="statusbar__item"><kbd>1</kbd>–<kbd>5</kbd> 切换</span>
+      <span class="statusbar__item statusbar__item--soft">${settings.store_slogan || '现磨手冲 · 每日新鲜烘焙'}</span>
+      <span class="statusbar__item statusbar__item--kbd"><kbd>1</kbd>–<kbd>5</kbd> 切换</span>
     </footer>`;
 
   shell = { view: app.querySelector('#view') };

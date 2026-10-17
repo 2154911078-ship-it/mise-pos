@@ -4,6 +4,7 @@
 import { api } from '../api.js';
 import { icon } from '../icons.js';
 import { money } from '../format.js';
+import { productArt } from '../art.js';
 import { escapeHtml, toast, openModal, confirmDialog } from '../ui.js';
 
 export const meta = { title: '商品库存', eyebrow: 'INVENTORY' };
@@ -121,7 +122,7 @@ function paint() {
       <tr>
         <td>
           <div class="row" style="gap:10px">
-            <span class="item-thumb">${escapeHtml(p.name.slice(0, 1))}</span>
+            <span class="item-thumb">${productArt(p.name, p.categoryName)}</span>
             <div style="min-width:0">
               <div class="cell-strong">${escapeHtml(p.name)}</div>
               <div class="dim mono" style="font-size:9.5px">${escapeHtml(p.sku)}</div>
