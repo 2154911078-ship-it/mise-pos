@@ -6,8 +6,16 @@
  */
 import crypto from 'node:crypto';
 
-const SECRET = process.env.JWT_SECRET || 'mise-dev-secret-please-change-in-production';
+const DEV_SECRET = 'mise-dev-secret-please-change-in-production';
+const SECRET = process.env.JWT_SECRET || DEV_SECRET;
 const TTL_SECONDS = Number(process.env.JWT_TTL || 60 * 60 * 12); // 12h
+
+if (process.env.NODE_ENV === 'production' && SECRET === DEV_SECRET) {
+  console.warn(
+    '\n  [warn] 生产环境未设置 JWT_SECRET，正在使用内置默认密钥。\n' +
+      '         任何人拿到源码都能伪造令牌，请务必设置 JWT_SECRET。\n'
+  );
+}
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');

@@ -121,6 +121,8 @@ export const store = {
     localStorage.setItem('mise.theme', theme);
     document.documentElement.dataset.theme = theme;
     this.set({ theme });
+    // 报头图标、设置页开关都靠这个事件保持同步
+    window.dispatchEvent(new CustomEvent('mise:theme', { detail: theme }));
   },
 
   /* ------------------------------------------------------------ 菜单同步 */

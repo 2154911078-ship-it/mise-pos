@@ -6,7 +6,7 @@
  */
 import { api } from '../api.js';
 import { icon } from '../icons.js';
-import { money, PAYMENT_LIST } from '../format.js';
+import { money, paymentMeta, PAYMENT_LIST } from '../format.js';
 import { escapeHtml, flip, animateNumber, toast, openModal } from '../ui.js';
 
 export const meta = { title: '点单台', eyebrow: 'ORDER' };
@@ -392,7 +392,7 @@ function showSuccess(host, order, close) {
         <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
       </div>
       <div class="success__amount">${money(order.total)}</div>
-      <div class="label" style="margin-top:6px">${order.orderNo} · ${methodName(order.paymentMethod)}</div>
+      <div class="label" style="margin-top:6px">${order.orderNo} · ${paymentMeta(order.paymentMethod).text}</div>
     </div>`;
   const foot = panel.querySelector('.modal__foot');
   if (foot) foot.style.display = 'none';
@@ -408,8 +408,4 @@ function showSuccess(host, order, close) {
     close();
     toast(`收款成功 ${money(order.total)}`, 'success');
   }, 1700);
-}
-
-function methodName(key) {
-  return { cash: '现金', wechat: '微信支付', alipay: '支付宝', card: '银行卡' }[key] ?? key;
 }

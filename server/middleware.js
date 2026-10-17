@@ -4,16 +4,27 @@
 import { verifyToken } from './auth.js';
 import { ApiError } from './utils.js';
 
-export function requireAuth(req, _res, next) {
+const toUser = (payload) =>
+  payload ? { id: payload.sub, username: payload.username, name: payload.name, role: payload.role } : null;
+
+const bearerToken = (req) => {
   const header = req.headers.authorization || '';
-  const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
-  // SSE 无法自定义请求头，允许通过 query 传递令牌
-  const token = bearer || req.query.token;
+  return header.startsWith('Bearer ') ? header.slice(7) : null;
+};
 
-  const payload = verifyToken(token);
-  if (!payload) return next(new ApiError(401, 'UNAUTHORIZED', '登录已失效，请重新登录'));
+export function requireAuth(req, _res, next) {
+  const user = toUser(verifyToken(bearerToken(req)));
+  if (!user) return next(new ApiError(401, 'UNAUTHORIZED', '登录已失效，请重新登录'));
+  req.user = user;
+  next();
+}
 
-  req.user = { id: payload.sub, username: payload.username, name: payload.name, role: payload.role };
+/** 仅用于 SSE：EventSource 无法自定义请求头，只能把令牌放进 query。
+ *  普通接口一律只认 Authorization 头，避免令牌出现在 URL / 访问日志里。 */
+export function requireAuthStream(req, _res, next) {
+  const user = toUser(verifyToken(bearerToken(req))) || toUser(verifyToken(req.query.token));
+  if (!user) return next(new ApiError(401, 'UNAUTHORIZED', '登录已失效，请重新登录'));
+  req.user = user;
   next();
 }
 

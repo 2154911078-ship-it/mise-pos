@@ -71,6 +71,17 @@ describe('鉴权', () => {
     const res = await fetch(`${base}/api/menu`, { headers: { Authorization: `Bearer ${forged}` } });
     assert.equal(res.status, 401);
   });
+
+  it('同一账号连续失败会被限流', async () => {
+    const body = { username: 'nobody', password: 'nope' };
+    for (let i = 0; i < 5; i += 1) {
+      const { status } = await api('/api/auth/login', { method: 'POST', body, auth: false, raw: true });
+      assert.equal(status, 401);
+    }
+    const { status, json } = await api('/api/auth/login', { method: 'POST', body, auth: false, raw: true });
+    assert.equal(status, 429);
+    assert.equal(json.error.code, 'TOO_MANY_ATTEMPTS');
+  });
 });
 
 describe('菜单', () => {
@@ -186,9 +197,10 @@ describe('报表', () => {
     assert.equal(status, 400);
   });
 
-  it('小时分布覆盖 8–22 点共 15 个时段', async () => {
+  it('小时分布默认覆盖营业时段 8–22 点', async () => {
     const res = await api('/api/stats/hourly');
-    assert.equal(res.data.hours.length, 15);
+    assert.equal(res.data.hours[0].hour, 8);
+    assert.equal(res.data.hours.at(-1).hour, 22);
   });
 });
 
@@ -205,5 +217,117 @@ describe('权限', () => {
       body: JSON.stringify({ price: 100 }),
     });
     assert.equal(res.status, 403);
+  });
+});
+
+/* ---------------------------------------------------------------- 边界回归 */
+describe('边界与一致性', () => {
+  const ymd = () => {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const pickProduct = async () => (await api('/api/menu')).data.products.find((p) => p.stock > 5);
+
+  it('优惠金额超过小计时被夹到小计，实收不会为负', async () => {
+    const p = await pickProduct();
+    const res = await api('/api/orders', {
+      method: 'POST',
+      body: { items: [{ productId: p.id, qty: 1 }], discountCents: p.price + 99900 },
+    });
+    assert.equal(res.data.order.discount, p.price, '优惠应被夹到小计');
+    assert.equal(res.data.order.total, 0);
+    assert.equal(res.data.order.status, 'open');
+  });
+
+  it('同一商品拆成两行也守 99 件上限', async () => {
+    const p = await pickProduct();
+    const { status, json } = await api('/api/orders', {
+      method: 'POST',
+      body: { items: [{ productId: p.id, qty: 60 }, { productId: p.id, qty: 60 }] },
+      raw: true,
+    });
+    assert.equal(status, 400);
+    assert.match(json.error.message, /1–99/);
+  });
+
+  it('补货拒绝负数，避免流水 delta 与实际库存不符', async () => {
+    const p = await pickProduct();
+    const { status } = await api(`/api/menu/products/${p.id}/restock`, {
+      method: 'POST',
+      body: { qty: -5 },
+      raw: true,
+    });
+    assert.equal(status, 400);
+  });
+
+  it('补货后流水 delta 与库存变化一致', async () => {
+    const p = await pickProduct();
+    const before = db.prepare('SELECT stock FROM products WHERE id = ?').get(p.id).stock;
+    const res = await api(`/api/menu/products/${p.id}/restock`, { method: 'POST', body: { qty: 10 } });
+    assert.equal(res.data.stock, before + 10);
+
+    const log = db
+      .prepare("SELECT delta, balance FROM inventory_logs WHERE product_id = ? AND reason = 'restock' ORDER BY id DESC")
+      .get(p.id);
+    assert.equal(log.delta, 10);
+    assert.equal(log.balance, before + 10);
+  });
+
+  it('单日流水号超过 999 后仍然唯一', async () => {
+    const p = await pickProduct();
+    const fake = db.prepare('INSERT INTO orders (order_no, status, subtotal_cents, total_cents) VALUES (?, ?, 100, 100)');
+    fake.run(`${ymd()}-999`, 'open');
+
+    const res = await api('/api/orders', { method: 'POST', body: { items: [{ productId: p.id, qty: 1 }] } });
+    assert.equal(res.data.order.orderNo, `${ymd()}-1000`, '不能因为 substr(-3) 取到 000 而重号');
+
+    db.prepare('DELETE FROM orders WHERE order_no = ?').run(`${ymd()}-999`);
+  });
+
+  it('CSV 导出遵循当前筛选条件', async () => {
+    const list = await api('/api/orders?status=open&limit=1');
+    const target = list.data.orders[0];
+    await api(`/api/orders/${target.id}/pay`, { method: 'POST', body: { paymentMethod: 'cash' } });
+
+    const res = await fetch(`${base}/api/orders/export.csv?status=paid`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = (await res.text()).replace(/^\uFEFF/, '');
+    const lines = text.split('\r\n');
+
+    assert.ok(lines[0].startsWith('单号'), '应有表头');
+    assert.equal(lines.length, 2, '只导出已结账的那一笔');
+    assert.ok(lines[1].includes(target.orderNo));
+  });
+
+  it('营业时段外的订单也会出现在时段分布里', async () => {
+    const p = await pickProduct();
+    const at = new Date();
+    at.setHours(7, 15, 0, 0);
+    const iso = at.toISOString();
+
+    db.prepare(
+      `INSERT INTO orders (order_no, status, subtotal_cents, total_cents, payment_method, created_at, paid_at)
+       VALUES (?, 'paid', ?, ?, 'cash', ?, ?)`
+    ).run(`${ymd()}-777`, p.price, p.price, iso, iso);
+
+    const res = await api('/api/stats/hourly');
+    assert.equal(res.data.hours[0].hour, 7, '7 点的单不能被丢掉');
+    assert.ok(res.data.hours.some((h) => h.hour === 7 && h.orders === 1));
+  });
+});
+
+describe('令牌传递方式', () => {
+  it('普通接口不接受 query 里的令牌（避免令牌进日志）', async () => {
+    const res = await fetch(`${base}/api/menu?token=${encodeURIComponent(token)}`);
+    assert.equal(res.status, 401);
+  });
+
+  it('SSE 允许 query 传令牌，因为 EventSource 无法设置请求头', async () => {
+    const ac = new AbortController();
+    const res = await fetch(`${base}/api/events?token=${encodeURIComponent(token)}`, { signal: ac.signal });
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /text\/event-stream/);
+    ac.abort();
   });
 });

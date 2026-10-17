@@ -55,6 +55,12 @@ async function request(path, { method = 'GET', body, query, raw = false } = {}) 
     throw new ApiError('NETWORK', '网络连接失败，请检查服务是否在运行', 0);
   }
 
+  if (res.status === 401 && !path.includes('/auth/login')) {
+    session.clear();
+    window.dispatchEvent(new CustomEvent('mise:unauthorized'));
+    throw new ApiError('UNAUTHORIZED', '登录已失效', 401);
+  }
+
   if (raw) return res;
 
   let payload = null;
@@ -62,12 +68,6 @@ async function request(path, { method = 'GET', body, query, raw = false } = {}) 
     payload = await res.json();
   } catch {
     /* 非 JSON 响应 */
-  }
-
-  if (res.status === 401 && !path.includes('/auth/login')) {
-    session.clear();
-    window.dispatchEvent(new CustomEvent('mise:unauthorized'));
-    throw new ApiError('UNAUTHORIZED', '登录已失效', 401);
   }
 
   if (!res.ok || !payload?.ok) {
@@ -105,6 +105,20 @@ export const api = {
 
   settings: () => request('/api/settings'),
   saveSettings: (patch) => request('/api/settings', { method: 'PUT', body: patch }),
+
+  /** 导出 CSV：带上当前筛选条件，导出「看到的」而不是「全部的」 */
+  async downloadOrdersCsv(query = {}) {
+    const res = await request('/api/orders/export.csv', { query, raw: true });
+    if (!res.ok) throw new ApiError('EXPORT_FAILED', '导出失败，请稍后重试', res.status);
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mise-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 /** SSE 订阅：返回取消函数 */

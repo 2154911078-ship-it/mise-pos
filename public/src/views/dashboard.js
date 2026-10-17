@@ -29,9 +29,12 @@ export function render(ctx) {
           </div>
           <div class="seg" id="range-seg" style="margin-left:auto">
             <span class="seg__thumb"></span>
-            <button class="seg__btn" data-range="7">7 天</button>
-            <button class="seg__btn is-active" data-range="14">14 天</button>
-            <button class="seg__btn" data-range="30">30 天</button>
+            ${[7, 14, 30]
+              .map(
+                (d) =>
+                  `<button class="seg__btn ${range === d ? 'is-active' : ''}" data-range="${d}">${d} 天</button>`
+              )
+              .join('')}
           </div>
         </header>
         <div class="card__body">
@@ -130,7 +133,6 @@ async function loadOverview() {
         prefix: '¥',
         delta: today.revenueDelta,
         hint: `昨日 ${money(data.yesterday.revenue)}`,
-        glow: 'rgba(255,122,69,.2)',
         i: 0,
       })}
       ${kpiCard({
@@ -140,7 +142,6 @@ async function loadOverview() {
         suffix: ' 单',
         delta: today.ordersDelta,
         hint: `待结账 ${openOrders} 单`,
-        glow: 'rgba(78,205,196,.18)',
         i: 1,
       })}
       ${kpiCard({
@@ -150,7 +151,6 @@ async function loadOverview() {
         prefix: '¥',
         decimals: 1,
         hint: `本月 ${compactMoney(month.revenue)}`,
-        glow: 'rgba(167,139,250,.18)',
         i: 2,
       })}
       ${kpiCard({
@@ -161,7 +161,6 @@ async function loadOverview() {
         decimals: 1,
         hint: lowStock > 0 ? `${lowStock} 个商品库存偏低` : '库存水位健康',
         warn: lowStock > 0,
-        glow: 'rgba(255,200,87,.16)',
         i: 3,
       })}`;
 
@@ -171,10 +170,10 @@ async function loadOverview() {
   }
 }
 
-function kpiCard({ label, icon: iconName, value, prefix = '', suffix = '', decimals = 0, delta, hint, glow, warn, i }) {
+function kpiCard({ label, icon: iconName, value, prefix = '', suffix = '', decimals = 0, delta, hint, warn, i }) {
   const chip = delta === undefined ? '' : deltaChip(delta);
   return `
-    <article class="kpi spotlight" style="--i:${i};--kpi-glow:${glow}">
+    <article class="kpi spotlight" style="--i:${i}">
       <div class="kpi__label">${icon(iconName, 14)} ${label}</div>
       <div class="kpi__value" data-count="${value}" data-prefix="${prefix}" data-suffix="${suffix}"
            data-decimals="${decimals}" data-duration="1000">0</div>
@@ -297,7 +296,7 @@ async function loadHourly() {
             (h, i) => `
           <div class="bars__col" title="${h.hour}:00 · ${h.orders} 单 · ${money(h.revenue)}">
             <div class="bars__fill" style="height:${Math.max((h.orders / max) * 100, 3)}%;--i:${i}"></div>
-            <span class="bars__x">${h.hour % 2 === 0 ? h.hour : ''}</span>
+            <span class="bars__x">${i % 2 === 0 || i === data.hours.length - 1 ? h.hour : ''}</span>
           </div>`
           )
           .join('')}

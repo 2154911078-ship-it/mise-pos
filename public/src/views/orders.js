@@ -9,33 +9,36 @@ import { escapeHtml, toast, openDrawer, confirmDialog, openModal, animateNumber 
 export const meta = { title: '账单流水', eyebrow: 'ORDERS' };
 
 const filters = { status: 'all', keyword: '', date: '' };
+let pageSize = 60;
 let rootEl = null;
 let ctxRef = null;
 
 export function render(ctx) {
   ctxRef = ctx;
+  const on = (status) => (filters.status === status ? 'is-active' : '');
+
   return `
   <div class="view__inner">
     <div class="toolbar">
       <div class="seg" id="order-status">
         <span class="seg__thumb"></span>
-        <button class="seg__btn is-active" data-status="all">全部</button>
-        <button class="seg__btn" data-status="open">待结账</button>
-        <button class="seg__btn" data-status="paid">已结账</button>
-        <button class="seg__btn" data-status="void">已作废</button>
+        <button class="seg__btn ${on('all')}" data-status="all">全部</button>
+        <button class="seg__btn ${on('open')}" data-status="open">待结账</button>
+        <button class="seg__btn ${on('paid')}" data-status="paid">已结账</button>
+        <button class="seg__btn ${on('void')}" data-status="void">已作废</button>
       </div>
       <div class="search" style="width:230px">
         ${icon('search', 15)}
-        <input class="input" id="order-search" placeholder="单号 / 桌号 / 商品" />
+        <input class="input" id="order-search" placeholder="单号 / 桌号 / 商品" value="${escapeHtml(filters.keyword)}" />
       </div>
-      <input class="input" id="order-date" type="date" style="width:172px" />
+      <input class="input" id="order-date" type="date" style="width:172px" value="${escapeHtml(filters.date)}" />
       <div class="toolbar__spacer"></div>
       <span class="dim" id="order-total" style="font-size:12px"></span>
       <button class="btn" id="export-csv">${icon('download', 15)} 导出 CSV</button>
     </div>
 
     <div class="card" style="overflow:hidden">
-      <div class="table-wrap" style="max-height:calc(100dvh - 230px)">
+      <div class="table-wrap" style="max-height:calc(100dvh - 268px)">
         <table class="table">
           <thead>
             <tr>
@@ -54,6 +57,11 @@ export function render(ctx) {
         </table>
       </div>
     </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:14px">
+      <span class="dim" id="order-shown" style="font-size:11.5px"></span>
+      <button class="btn btn--sm" id="order-more" hidden>加载更多</button>
+    </div>
   </div>`;
 }
 
@@ -67,6 +75,7 @@ export function mount(root, ctx) {
     const btn = e.target.closest('[data-status]');
     if (!btn) return;
     filters.status = btn.dataset.status;
+    pageSize = 60;
     root.querySelectorAll('[data-status]').forEach((b) => b.classList.toggle('is-active', b === btn));
     moveThumb(root.querySelector('#order-status'));
     load();
@@ -77,13 +86,22 @@ export function mount(root, ctx) {
     clearTimeout(timer);
     timer = setTimeout(() => {
       filters.keyword = e.target.value.trim();
+      pageSize = 60;
       load();
     }, 260);
   });
 
   root.querySelector('#order-date').addEventListener('change', (e) => {
     filters.date = e.target.value;
+    pageSize = 60;
     load();
+  });
+
+  root.querySelector('#order-more').addEventListener('click', (e) => {
+    pageSize += 60;
+    const btn = e.currentTarget;
+    btn.classList.add('btn--loading');
+    load().finally(() => btn.classList.remove('btn--loading'));
   });
 
   root.querySelector('#export-csv').addEventListener('click', exportCsv);
@@ -113,11 +131,20 @@ async function load() {
       status: filters.status,
       q: filters.keyword,
       date: filters.date,
-      limit: 60,
+      limit: pageSize,
     });
 
     const totalEl = rootEl.querySelector('#order-total');
     if (totalEl) totalEl.textContent = `共 ${data.total} 笔`;
+
+    const shownEl = rootEl.querySelector('#order-shown');
+    const moreBtn = rootEl.querySelector('#order-more');
+    if (shownEl) {
+      shownEl.textContent = data.total
+        ? `已显示 ${data.orders.length} / ${data.total} 笔`
+        : '';
+    }
+    if (moreBtn) moreBtn.hidden = data.orders.length >= data.total;
 
     if (!data.orders.length) {
       tbody.innerHTML = `<tr><td colspan="7">
@@ -228,7 +255,7 @@ async function openDetail(id) {
         .filter((l) => l.reason === 'sale')
         .slice(0, 4)
         .map(
-          (l) => `<div class="timeline__item" style="opacity:.7">扣减库存 ${escapeHtml(l.product)} ${l.delta}
+          (l) => `<div class="timeline__item" style="opacity:.7">扣减 ${escapeHtml(l.product)} ×${Math.abs(l.delta)}
              <div class="timeline__time">${dateTime(l.createdAt)}</div></div>`
         )
         .join('')}
@@ -307,7 +334,8 @@ function openPayDialog(order, onDone) {
         });
       });
       host.querySelector('#do-pay').addEventListener('click', async (e) => {
-        e.currentTarget.classList.add('btn--loading');
+        const btn = e.currentTarget;
+        btn.classList.add('btn--loading');
         try {
           await api.payOrder(order.id, method);
           close();
@@ -315,7 +343,7 @@ function openPayDialog(order, onDone) {
           onDone?.();
           ctxRef.refreshMenu?.();
         } catch (err) {
-          e.currentTarget.classList.remove('btn--loading');
+          btn.classList.remove('btn--loading');
           toast(err.message, 'error');
         }
       });
@@ -323,22 +351,21 @@ function openPayDialog(order, onDone) {
   });
 }
 
-async function exportCsv() {
+async function exportCsv(e) {
+  const btn = e?.currentTarget;
+  btn?.classList.add('btn--loading');
   try {
-    const res = await fetch('/api/orders/export.csv', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('mise.token')}` },
+    // 带上当前筛选，导出「看到的」这批账单
+    await api.downloadOrdersCsv({
+      status: filters.status,
+      q: filters.keyword,
+      date: filters.date,
     });
-    if (!res.ok) throw new Error('导出失败');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mise-orders-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
     toast('CSV 已导出', 'success');
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    btn?.classList.remove('btn--loading');
   }
 }
 

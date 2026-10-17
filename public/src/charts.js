@@ -8,8 +8,6 @@
  */
 import { compactMoney, money, dateMD } from './format.js';
 
-const NS = 'http://www.w3.org/2000/svg';
-
 /* --------------------------------------------------------------- 面积图 */
 export function areaChart(points, { height = 250, color = 'var(--brand)', id = 'area' } = {}) {
   const W = 760;
@@ -81,56 +79,6 @@ export function areaChart(points, { height = 250, color = 'var(--brand)', id = '
     </svg>`;
 }
 
-/* --------------------------------------------------------------- 环形图 */
-export function donutChart(items, { size = 132, total } = {}) {
-  const r = 52;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * r;
-  const sum = total || items.reduce((acc, i) => acc + i.revenue, 0) || 1;
-
-  let offset = 0;
-  const segments = items
-    .map((item) => {
-      const len = (item.revenue / sum) * circumference;
-      const dash = `${Math.max(len - 2.5, 0)} ${circumference - Math.max(len - 2.5, 0)}`;
-      const seg = `
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${item.color}" stroke-width="13"
-                stroke-dasharray="${dash}" stroke-dashoffset="${-offset}" stroke-linecap="round"
-                class="donut__seg" style="--seg-len:${len}">
-          <title>${item.name} · ${money(item.revenue)}</title>
-        </circle>`;
-      offset += len;
-      return seg;
-    })
-    .join('');
-
-  return `
-    <svg class="donut__svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="品类占比">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--panel-3)" stroke-width="13"/>
-      ${segments}
-      <text x="${cx}" y="${cy - 4}" text-anchor="middle" class="donut__value">${compactMoney(sum)}</text>
-      <text x="${cx}" y="${cy + 14}" text-anchor="middle" class="donut__center">30 天营收</text>
-    </svg>`;
-}
-
-/* -------------------------------------------------------------- 迷你线 */
-export function sparkline(points, { width = 96, height = 30, color = 'var(--mint)' } = {}) {
-  const values = points.map((p) => p.revenue ?? p);
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const span = max - min || 1;
-  const step = width / Math.max(values.length - 1, 1);
-
-  const d = values
-    .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(1)} ${(height - ((v - min) / span) * (height - 4) - 2).toFixed(1)}`)
-    .join(' ');
-
-  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-
 /* ------------------------------------------------------------- 辅助函数 */
 function smoothPath(pts) {
   if (!pts.length) return '';
@@ -161,4 +109,3 @@ function niceMax(value) {
   return nice * base;
 }
 
-export { NS };

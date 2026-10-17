@@ -85,6 +85,7 @@ async function startApp() {
   renderShell();
   await route();
   startLive();
+  syncPending();
 }
 
 /* ------------------------------------------------------------------ 外壳 */
@@ -285,6 +286,31 @@ function updateOpenBadge() {
   if (status) status.textContent = `待结账 ${count}`;
 }
 
+/** 待结账数以后端为准：多终端同时收银时，本地自增会漂移 */
+let pendingTimer = null;
+function syncPending() {
+  clearTimeout(pendingTimer);
+  pendingTimer = setTimeout(async () => {
+    try {
+      const { openOrders } = await api.overview();
+      store.set({ pendingOrders: openOrders }, { silent: true });
+      updateOpenBadge();
+    } catch {
+      /* 离线时忽略 */
+    }
+  }, 260);
+}
+
+/** 改价 / 补货来自别的终端时，重拉菜单并让当前页重绘 */
+let menuTimer = null;
+function syncMenuSoon() {
+  clearTimeout(menuTimer);
+  menuTimer = setTimeout(async () => {
+    await refreshMenu().catch(() => {});
+    if (currentKey === 'pos' || currentKey === 'inventory') await route({ silent: true });
+  }, 220);
+}
+
 /* ------------------------------------------------------------- 实时事件 */
 function startLive() {
   if (unsubscribeSSE) return;
@@ -301,17 +327,17 @@ function startLive() {
   unsubscribeSSE = subscribeEvents({
     hello: () => setConn('live', '实时连接'),
     'order:created': (order) => {
-      store.set({ pendingOrders: store.state.pendingOrders + 1 });
-      updateOpenBadge();
+      syncPending();
       toast(`新订单 ${order.orderNo} · ${money(order.total)}`, 'info', 2600);
     },
-    'order:paid': () => {
-      store.set({ pendingOrders: Math.max(store.state.pendingOrders - 1, 0) });
-      updateOpenBadge();
-    },
+    'order:paid': () => syncPending(),
+    'order:void': () => syncPending(),
+    'product:updated': () => syncMenuSoon(),
+    'stock:updated': () => syncMenuSoon(),
     'stock:low': (payload) => {
       const names = payload.items.map((i) => i.name).slice(0, 2).join('、');
       toast(`库存预警：${names}${payload.items.length > 2 ? ' 等' : ''}`, 'warn', 4200);
+      syncMenuSoon();
     },
     error: () => setConn('off', '连接断开'),
   });
@@ -333,6 +359,7 @@ function logout() {
   stopLive();
   session.clear();
   store.clearCart();
+  store.set({ pendingOrders: 0 }, { silent: true });
   currentKey = null;
   location.hash = '';
   showLogin();
@@ -357,4 +384,8 @@ window.addEventListener('mise:unauthorized', () => {
   toast('登录已过期，请重新登录', 'warn');
 });
 
-window.addEventListener('resize', () => {});
+// 设置页切主题时，报头那颗按钮也要跟着换图标
+window.addEventListener('mise:theme', (e) => {
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.innerHTML = icon(e.detail === 'dark' ? 'sun' : 'moon', 16);
+});

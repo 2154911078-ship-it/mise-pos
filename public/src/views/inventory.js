@@ -19,7 +19,7 @@ export function render(ctx) {
     <div class="toolbar">
       <div class="search" style="width:240px">
         ${icon('search', 15)}
-        <input class="input" id="inv-search" placeholder="搜索商品名或 SKU" />
+        <input class="input" id="inv-search" placeholder="搜索商品名或 SKU" value="${escapeHtml(keyword)}" />
       </div>
       <span class="badge badge--flat" id="inv-total"></span>
       <span class="badge badge--rose" id="inv-low" hidden></span>
@@ -64,7 +64,7 @@ export function mount(root, ctx) {
   root.querySelector('#inv-search').addEventListener('input', (e) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      keyword = e.target.value.trim().toLowerCase();
+      keyword = e.target.value.trim();
       paint();
     }, 200);
   });
@@ -92,8 +92,9 @@ function paint() {
   if (!tbody) return;
 
   const products = ctxRef.store.state.menu.products;
+  const kw = keyword.toLowerCase();
   const list = products.filter(
-    (p) => !keyword || p.name.toLowerCase().includes(keyword) || p.sku.toLowerCase().includes(keyword)
+    (p) => !kw || p.name.toLowerCase().includes(kw) || p.sku.toLowerCase().includes(kw)
   );
   const low = products.filter((p) => p.stock <= p.lowStock && p.active);
   const isOwner = ctxRef.store.state.user?.role === 'owner';
@@ -180,7 +181,9 @@ function openRestock(id) {
       host.querySelector('#restock-confirm').addEventListener('click', async (e) => {
         qty = Number(input.value);
         if (!Number.isInteger(qty) || qty <= 0) return toast('请输入正整数', 'warn');
-        e.currentTarget.classList.add('btn--loading');
+        // currentTarget 只在事件派发期间有效，await 之后会变成 null
+        const btn = e.currentTarget;
+        btn.classList.add('btn--loading');
         try {
           await api.restock(id, qty);
           close();
@@ -188,7 +191,7 @@ function openRestock(id) {
           paint();
           toast(`已入库 ${qty} ${product.unit}`, 'success');
         } catch (err) {
-          e.currentTarget.classList.remove('btn--loading');
+          btn.classList.remove('btn--loading');
           toast(err.message, 'error');
         }
       });
@@ -225,7 +228,8 @@ function openPrice(id) {
         const price = Math.round(Number(host.querySelector('#new-price').value) * 100);
         const cost = Math.round(Number(host.querySelector('#new-cost').value) * 100);
         if (!Number.isInteger(price) || price < 0) return toast('价格不合法', 'warn');
-        e.currentTarget.classList.add('btn--loading');
+        const btn = e.currentTarget;
+        btn.classList.add('btn--loading');
         try {
           await api.updateProduct(id, { price, cost });
           close();
@@ -233,7 +237,7 @@ function openPrice(id) {
           paint();
           toast('价格已更新', 'success');
         } catch (err) {
-          e.currentTarget.classList.remove('btn--loading');
+          btn.classList.remove('btn--loading');
           toast(err.message, 'error');
         }
       });

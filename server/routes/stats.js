@@ -217,8 +217,13 @@ export default function statsRouter(db) {
         .all({ offset: dayRange(days) });
 
       const map = new Map(rows.map((r) => [Number(r.hour), r]));
+      // 默认展示营业时段 8–22 点，但窗口外（清晨/深夜）的单不能直接丢掉
+      const present = [...map.keys()];
+      const from = present.length ? Math.min(8, ...present) : 8;
+      const to = present.length ? Math.max(22, ...present) : 22;
+
       const hours = [];
-      for (let h = 8; h <= 22; h += 1) {
+      for (let h = from; h <= to; h += 1) {
         const hit = map.get(h);
         hours.push({ hour: h, orders: hit?.orders ?? 0, revenue: hit?.revenue ?? 0 });
       }

@@ -97,7 +97,10 @@ export default function ordersRouter(db, hub) {
       const qty = Number(raw?.qty);
       if (!Number.isInteger(productId) || productId <= 0) throw badRequest('商品参数不合法');
       if (!Number.isInteger(qty) || qty <= 0 || qty > 99) throw badRequest('单品数量需在 1–99 之间');
-      merged.set(productId, (merged.get(productId) ?? 0) + qty);
+      // 合并后仍要守上限，否则「同一商品拆成两行各 99」就能绕过
+      const total = (merged.get(productId) ?? 0) + qty;
+      if (total > 99) throw badRequest('单品数量需在 1–99 之间');
+      merged.set(productId, total);
     }
     if (!merged.size) throw badRequest('请至少选择一个商品');
 
@@ -177,35 +180,39 @@ export default function ordersRouter(db, hub) {
     })
   );
 
+  /** 账单筛选条件：列表与 CSV 导出共用，保证「看到什么就导出什么」 */
+  function orderFilter(query = {}) {
+    const { status = 'all', date = '', q = '' } = query;
+    const where = [];
+    const params = {};
+
+    if (status !== 'all') {
+      if (!['open', 'paid', 'void'].includes(status)) throw badRequest('未知的订单状态');
+      where.push('o.status = @status');
+      params.status = status;
+    }
+    if (date === 'today') {
+      where.push("date(o.created_at, 'localtime') = date('now', 'localtime')");
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+      where.push("date(o.created_at, 'localtime') = @date");
+      params.date = date;
+    }
+    if (q) {
+      where.push(`(
+        o.order_no LIKE @kw OR IFNULL(o.table_no, '') LIKE @kw OR
+        EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.name_snapshot LIKE @kw)
+      )`);
+      params.kw = `%${String(q).trim()}%`;
+    }
+
+    return { clause: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+  }
+
   router.get(
     '/',
     asyncHandler(async (req, res) => {
-      const { status = 'all', date = '', q = '' } = req.query;
       const { limit, offset } = pagination(req.query, { limit: 20, max: 100 });
-
-      const where = [];
-      const params = {};
-
-      if (status !== 'all') {
-        if (!['open', 'paid', 'void'].includes(status)) throw badRequest('未知的订单状态');
-        where.push('o.status = @status');
-        params.status = status;
-      }
-      if (date === 'today') {
-        where.push("date(o.created_at, 'localtime') = date('now', 'localtime')");
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
-        where.push("date(o.created_at, 'localtime') = @date");
-        params.date = date;
-      }
-      if (q) {
-        where.push(`(
-          o.order_no LIKE @kw OR IFNULL(o.table_no, '') LIKE @kw OR
-          EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.name_snapshot LIKE @kw)
-        )`);
-        params.kw = `%${String(q).trim()}%`;
-      }
-
-      const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const { clause, params } = orderFilter(req.query);
 
       const total = db.prepare(`SELECT COUNT(*) AS c FROM orders o ${clause}`).get(params).c;
 
@@ -229,6 +236,7 @@ export default function ordersRouter(db, hub) {
   router.get(
     '/export.csv',
     asyncHandler(async (req, res) => {
+      const { clause, params } = orderFilter(req.query);
       const rows = db
         .prepare(
           `SELECT o.order_no, o.created_at, o.paid_at, o.status, IFNULL(o.table_no, '') AS table_no,
@@ -237,9 +245,10 @@ export default function ordersRouter(db, hub) {
                   (SELECT GROUP_CONCAT(oi.name_snapshot || ' x' || oi.qty, ' / ')
                      FROM order_items oi WHERE oi.order_id = o.id) AS items
            FROM orders o LEFT JOIN users u ON u.id = o.cashier_id
+           ${clause}
            ORDER BY o.created_at DESC LIMIT 5000`
         )
-        .all();
+        .all(params);
 
       const header = ['单号', '下单时间', '支付时间', '状态', '桌号', '小计(元)', '优惠(元)', '实收(元)', '支付方式', '收银员', '商品明细'];
       const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;

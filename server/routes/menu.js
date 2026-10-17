@@ -100,7 +100,9 @@ export default function menuRouter(db, hub) {
       if (!product) throw notFound('商品不存在');
 
       const qty = Number(req.body?.qty);
-      if (!Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 999) {
+      // 补货只做入库；负数会让 MAX(0, stock + qty) 静默截断，
+      // 流水的 delta 与实际库存变化对不上，所以这里直接拒绝。
+      if (!Number.isInteger(qty) || qty < 1 || qty > 999) {
         throw badRequest('补货数量需为 1–999 的整数');
       }
 

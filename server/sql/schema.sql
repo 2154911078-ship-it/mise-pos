@@ -114,16 +114,3 @@ SELECT
   CAST(ROUND(AVG(total_cents)) AS INTEGER) AS avg_ticket_cents
 FROM v_paid_orders
 GROUP BY biz_date;
-
-CREATE VIEW IF NOT EXISTS v_product_sales AS
-SELECT
-  i.product_id,
-  p.name,
-  p.emoji,
-  SUM(i.qty)                          AS qty,
-  SUM(i.line_total_cents)             AS revenue_cents,
-  SUM(i.qty * p.cost_cents)           AS cost_cents
-FROM order_items i
-JOIN orders   o ON o.id = i.order_id AND o.status = 'paid'
-JOIN products p ON p.id = i.product_id
-GROUP BY i.product_id;

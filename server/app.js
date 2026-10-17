@@ -5,7 +5,7 @@ import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createEventHub } from './events.js';
-import { requireAuth, errorHandler, notFoundHandler, requestLogger } from './middleware.js';
+import { requireAuthStream, errorHandler, notFoundHandler, requestLogger } from './middleware.js';
 import authRouter from './routes/auth.js';
 import menuRouter from './routes/menu.js';
 import ordersRouter from './routes/orders.js';
@@ -37,7 +37,7 @@ export function createApp(db) {
   app.use('/api/settings', settingsRouter(db));
 
   // ---- 实时事件流（SSE）----
-  app.get('/api/events', requireAuth, (req, res) => {
+  app.get('/api/events', requireAuthStream, (req, res) => {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',

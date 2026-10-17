@@ -22,7 +22,7 @@ export function render(ctx) {
         <header class="card__head">
           <div>
             <div class="card__title">门店资料</div>
-            <div class="card__sub">显示在侧栏与导出的账单中</div>
+            <div class="card__sub">显示在报头与小票上</div>
           </div>
           ${isOwner ? '' : '<span class="badge badge--flat" style="margin-left:auto">只读</span>'}
         </header>
@@ -106,7 +106,8 @@ export function mount(root, ctx) {
   ctxRef = ctx;
 
   root.querySelector('#save-settings')?.addEventListener('click', async (e) => {
-    e.currentTarget.classList.add('btn--loading');
+    const btn = e.currentTarget;
+    btn.classList.add('btn--loading');
     try {
       const data = await api.saveSettings({
         store_name: root.querySelector('#set-name').value.trim(),
@@ -119,7 +120,7 @@ export function mount(root, ctx) {
     } catch (err) {
       toast(err.message, 'error');
     } finally {
-      e.currentTarget.classList.remove('btn--loading');
+      btn.classList.remove('btn--loading');
     }
   });
 
@@ -129,22 +130,16 @@ export function mount(root, ctx) {
     e.currentTarget.classList.toggle('is-on', next === 'dark');
   });
 
-  root.querySelector('#export-data').addEventListener('click', async () => {
+  root.querySelector('#export-data').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.classList.add('btn--loading');
     try {
-      const res = await fetch('/api/orders/export.csv', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('mise.token')}` },
-      });
-      if (!res.ok) throw new Error('导出失败');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `mise-orders-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await api.downloadOrdersCsv();
       toast('账单已导出', 'success');
     } catch (err) {
       toast(err.message, 'error');
+    } finally {
+      btn.classList.remove('btn--loading');
     }
   });
 

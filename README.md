@@ -112,7 +112,7 @@ npm start
 
 ```bash
 npm run dev      # 文件变更自动重启
-npm test         # 16 个 API 集成测试
+npm test         # 26 个 API 集成测试
 npm run db:reset # 删除本地数据库并重建（会重新生成演示数据）
 ```
 
@@ -154,7 +154,7 @@ mise-pos/
 
 ## 数据库设计
 
-7 张表、3 个视图、6 个索引。完整定义见 [`server/sql/schema.sql`](server/sql/schema.sql)。
+7 张表、2 个视图、6 个索引。完整定义见 [`server/sql/schema.sql`](server/sql/schema.sql)。
 
 ```sql
 users(id, username, password, display_name, role)
@@ -237,6 +237,8 @@ UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?;
 
 所有接口返回统一信封：`{ ok: true, data }` / `{ ok: false, error: { code, message } }`。
 
+令牌只走 `Authorization: Bearer`，只有 `/api/events` 例外（`EventSource` 无法设置请求头）。登录失败 5 次锁 5 分钟，账号不存在时也会跑一次 scrypt，避免用响应时间探测账号。
+
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | POST | `/api/auth/login` | 登录，返回 JWT（12h） |
@@ -249,14 +251,17 @@ UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?;
 | GET | `/api/orders/:id` | 详情 + 明细 + 库存流水 |
 | POST | `/api/orders/:id/pay` | 收款 |
 | POST | `/api/orders/:id/void` | 作废并回补库存 |
-| GET | `/api/orders/export.csv` | 导出 CSV |
+| GET | `/api/orders/export.csv` | 导出 CSV（沿用列表的 `status` / `date` / `q`） |
 | GET | `/api/stats/overview` | 今日 / 昨日 / 本月 KPI |
 | GET | `/api/stats/series?days=14` | 营收趋势 |
 | GET | `/api/stats/top` | 畅销商品 |
 | GET | `/api/stats/categories` | 品类结构 |
 | GET | `/api/stats/hourly` | 时段分布 |
 | GET | `/api/stats/payments` | 支付方式占比 |
+| GET | `/api/settings` | 门店资料 |
+| PUT | `/api/settings` | 保存门店资料（店长） |
 | GET | `/api/events` | SSE 事件流（`?token=` 传令牌） |
+| GET | `/api/health` | 健康检查（无需鉴权） |
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/auth/login \
@@ -295,14 +300,20 @@ curl -s localhost:3000/api/stats/overview -H "Authorization: Bearer $TOKEN" | jq
 npm test
 ```
 
-16 个集成测试跑在**内存数据库**上，通过真实 HTTP 请求验证：
+26 个集成测试跑在**内存数据库**上，通过真实 HTTP 请求验证：
 
-- 登录成功 / 密码错误 / 无令牌 / 伪造签名
+- 登录成功 / 密码错误 / 无令牌 / 伪造签名 / 连续失败限流
 - 服务端重新计价（前端传 `price: 1` 会被忽略）
+- 优惠金额超过小计时被夹到小计，实收不会为负
 - 下单扣库存；库存不足时整单回滚且库存不变
+- 同一商品拆成两行也守 99 件上限
 - 重复支付被拒绝
 - 作废回补库存、写入流水、不计入营收
-- 趋势图按天补零、非法参数返回 400
+- 补货拒绝负数，流水 `delta` 与库存变化一致
+- 单日流水号超过 999 后仍然唯一
+- 趋势图按天补零、非法参数返回 400、营业时段外的订单不被丢弃
+- CSV 导出遵循当前筛选条件
+- 普通接口不接受 query 里的令牌，只有 SSE 例外
 - 收银员改价返回 403
 
 ---

@@ -17,7 +17,10 @@ export const conflict = (msg, code = 'CONFLICT') => new ApiError(409, code, msg)
 /** 包装 async 路由，把 rejection 交给统一错误中间件 */
 export const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-/** 生成当日流水号：20261017-001 */
+/** 生成当日流水号：20261017-001
+ *  取序号时从第 10 位开始截（前缀固定 `YYYYMMDD-` 共 9 位），
+ *  这样单日超过 999 单后流水号变成 4 位也不会把 `substr(-3)` 取成 "000" 而重复。
+ */
 export function nextOrderNo(db, date = new Date()) {
   const ymd = [
     date.getFullYear(),
@@ -25,13 +28,10 @@ export function nextOrderNo(db, date = new Date()) {
     String(date.getDate()).padStart(2, '0'),
   ].join('');
   const row = db
-    .prepare(`SELECT MAX(CAST(substr(order_no, -3) AS INTEGER)) AS seq FROM orders WHERE order_no LIKE ?`)
+    .prepare(`SELECT MAX(CAST(substr(order_no, 10) AS INTEGER)) AS seq FROM orders WHERE order_no LIKE ?`)
     .get(`${ymd}-%`);
   return `${ymd}-${String((row?.seq ?? 0) + 1).padStart(3, '0')}`;
 }
-
-/** 把 DB 的 ISO 字符串原样返回；空值统一为 null */
-export const iso = (value) => value || null;
 
 /** 解析分页参数 */
 export function pagination(query, defaults = { limit: 20, max: 100 }) {

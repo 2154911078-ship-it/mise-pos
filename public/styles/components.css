@@ -274,11 +274,6 @@
   border-color: rgba(193, 68, 46, 0.4);
 }
 
-.badge--mint {
-  color: var(--mint);
-  border-color: rgba(47, 93, 74, 0.35);
-}
-
 .badge--rose {
   color: var(--rose);
   border-color: rgba(168, 50, 50, 0.35);
