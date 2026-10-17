@@ -2,11 +2,13 @@
 
 > 一套给独立小店用的点单 / 收银 / 库存 / 经营分析系统。Express + SQLite + 原生前端，**零构建、零外部服务、一条命令跑起来**。
 
-[![CI](https://github.com/yourname/mise-pos/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-ff7a45.svg)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-3ddc97.svg)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-c1442e.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-2f5d4a.svg)](https://nodejs.org)
+[![Tests](https://img.shields.io/badge/tests-26%2F26-2f5d4a.svg)](./tests/api.test.js)
 
-![经营看板](docs/screenshots/dashboard.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="经营看板" width="720">
+</p>
 
 ---
 
@@ -22,15 +24,20 @@
 
 ---
 
-## 界面
+## 界面一览
 
-| 点单台 | 确认收款 |
-| --- | --- |
-| ![点单台](docs/screenshots/pos.png) | ![收款](docs/screenshots/checkout.png) |
-
-| 账单流水 | 商品库存 |
-| --- | --- |
-| ![账单](docs/screenshots/orders.png) | ![库存](docs/screenshots/inventory.png) |
+<p align="center">
+  <img src="docs/screenshots/pos.png" width="49%" alt="点单台">
+  <img src="docs/screenshots/checkout.png" width="49%" alt="确认收款">
+</p>
+<p align="center">
+  <img src="docs/screenshots/orders.png" width="49%" alt="账单流水">
+  <img src="docs/screenshots/inventory.png" width="49%" alt="商品库存">
+</p>
+<p align="center">
+  <img src="docs/screenshots/login.png" width="49%" alt="登录页">
+  <img src="docs/screenshots/dashboard.png" width="49%" alt="经营看板">
+</p>
 
 ---
 
@@ -52,42 +59,27 @@
 
 ## 功能
 
-**点单收银**
-- 分类 / 关键词检索，售罄商品自动置灰
-- 购物车增减、桌号、整单优惠，金额实时重算
-- 微信 / 支付宝 / 现金 / 银行卡四种支付方式
-- 下单即锁库存，作废自动回补，账实始终一致
-
-**经营分析**
-- 今日营收 / 单量 / 客单价 / 毛利率，同比昨日与近 7 天环比
-- 14 天营收趋势（可切 7 / 30 天）、品类结构堆叠占比条、时段分布、支付方式占比
-- 畅销商品 Top 8、低库存预警
-
-**商品库存**
-- 改价 / 补货 / 上下架，全部留痕到 `inventory_logs`
-- 库存水位条 + 预警阈值，低于阈值标红
-- 改价只影响之后的订单，历史账单保留成交价快照
-
-**其他**
-- 店长 / 收银员两种角色，写操作按角色鉴权
-- SSE 实时推送新订单、支付、库存预警
-- 账单 CSV 导出（带 BOM，Excel 直接打开不乱码）
-- 暗 / 亮双主题，全站键盘快捷键
+| 模块 | 功能点 |
+|------|--------|
+| **🛒 点单收银** | 分类 / 关键词检索，售罄商品自动置灰；购物车增减、桌号、整单优惠，金额实时重算；微信 / 支付宝 / 现金 / 银行卡四种支付方式；下单即锁库存，作废自动回补，账实始终一致 |
+| **📊 经营分析** | 今日营收 / 单量 / 客单价 / 毛利率，同比昨日与近 7 天环比；14 天营收趋势（可切 7 / 30 天）、品类结构堆叠占比条、时段分布、支付方式占比；畅销商品 Top 8、低库存预警 |
+| **📦 商品库存** | 改价 / 补货 / 上下架，全部留痕到 `inventory_logs`；库存水位条 + 预警阈值，低于阈值标红；改价只影响之后的订单，历史账单保留成交价快照 |
+| **🔐 权限与实时** | 店长 / 收银员两种角色，写操作按角色鉴权；SSE 实时推送新订单、支付、库存预警；账单 CSV 导出（带 BOM，Excel 直接打开不乱码）；暗 / 亮双主题，全站键盘快捷键 |
 
 ---
 
 ## 技术栈
 
 | 层 | 选型 | 说明 |
-| --- | --- | --- |
-| 运行时 | Node.js ≥ 18 | 无 TypeScript 编译、无打包步骤 |
-| Web | Express 4 | 只做路由与中间件，业务逻辑在路由工厂里 |
-| 数据库 | SQLite（better-sqlite3） | WAL 模式，同步 API，事务简单可靠 |
-| 鉴权 | 手写 HS256 JWT + scrypt | 仅用 `node:crypto`，无 jsonwebtoken / bcrypt |
-| 实时 | Server-Sent Events | 单向推送足够，自动重连，比 WebSocket 省事 |
-| 前端 | 原生 ES Modules | 自研 60 行 store + hash 路由，零依赖 |
-| 图表 | 手写 SVG | Catmull-Rom 转贝塞尔，样式跟随 CSS 变量 |
-| 动效 | CSS + WAAPI | View Transitions、FLIP、描边绘制、遮罩上滑 |
+|------|------|------|
+| 🟢 运行时 | Node.js ≥ 18 | 无 TypeScript 编译、无打包步骤 |
+| 🌐 Web | Express 4 | 只做路由与中间件，业务逻辑在路由工厂里 |
+| 🗄️ 数据库 | SQLite（better-sqlite3） | WAL 模式，同步 API，事务简单可靠 |
+| 🔑 鉴权 | 手写 HS256 JWT + scrypt | 仅用 `node:crypto`，无 jsonwebtoken / bcrypt |
+| 📡 实时 | Server-Sent Events | 单向推送足够，自动重连，比 WebSocket 省事 |
+| 🎨 前端 | 原生 ES Modules | 自研 60 行 store + hash 路由，零依赖 |
+| 📈 图表 | 手写 SVG | Catmull-Rom 转贝塞尔，样式跟随 CSS 变量 |
+| ✨ 动效 | CSS + WAAPI | View Transitions、FLIP、描边绘制、遮罩上滑 |
 
 生产依赖只有两个：`express`、`better-sqlite3`。
 
@@ -159,6 +151,43 @@ mise-pos/
 ## 数据库设计
 
 7 张表、2 个视图、6 个索引。完整定义见 [`server/sql/schema.sql`](server/sql/schema.sql)。
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   users     │     │ categories  │     │  products   │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ id          │     │ id          │◄────┤ category_id │
+│ username    │     │ name        │     │ sku         │
+│ password    │     │ color       │     │ name        │
+│ display_name│     │ sort_order  │     │ price_cents │
+│ role        │     └─────────────┘     │ stock       │
+└──────┬──────┘                         │ low_stock   │
+       │                                └──────┬──────┘
+       │                                       │
+       │    ┌─────────────┐     ┌─────────────┐│
+       └───►│   orders    │◄────┤ order_items │┘
+            ├─────────────┤     ├─────────────┤
+            │ id          │     │ id          │
+            │ order_no    │     │ order_id    │
+            │ table_no    │     │ product_id  │
+            │ status      │     │ name_snapshot│
+            │ total_cents │     │ unit_price_cents│
+            │ cashier_id  │────►│ qty         │
+            │ created_at  │     │ line_total_cents│
+            └──────┬──────┘     └─────────────┘
+                   │
+                   │    ┌─────────────────┐
+                   └───►│ inventory_logs  │
+                        ├─────────────────┤
+                        │ id              │
+                        │ product_id      │
+                        │ delta           │
+                        │ balance         │
+                        │ reason          │
+                        │ order_id        │
+                        │ operator_id     │
+                        └─────────────────┘
+```
 
 ```sql
 users(id, username, password, display_name, role)
@@ -243,29 +272,29 @@ UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?;
 
 令牌只走 `Authorization: Bearer`，只有 `/api/events` 例外（`EventSource` 无法设置请求头）。登录失败 5 次锁 5 分钟，账号不存在时也会跑一次 scrypt，避免用响应时间探测账号。
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| POST | `/api/auth/login` | 登录，返回 JWT（12h） |
-| GET | `/api/auth/me` | 当前用户 |
-| GET | `/api/menu` | 分类 + 商品（含库存） |
-| PATCH | `/api/menu/products/:id` | 改价 / 上下架（店长） |
-| POST | `/api/menu/products/:id/restock` | 补货（店长） |
-| POST | `/api/orders` | 下单（事务扣库存） |
-| GET | `/api/orders` | 列表，支持 `status` / `date` / `q` / 分页 |
-| GET | `/api/orders/:id` | 详情 + 明细 + 库存流水 |
-| POST | `/api/orders/:id/pay` | 收款 |
-| POST | `/api/orders/:id/void` | 作废并回补库存 |
-| GET | `/api/orders/export.csv` | 导出 CSV（沿用列表的 `status` / `date` / `q`） |
-| GET | `/api/stats/overview` | 今日 / 昨日 / 本月 KPI |
-| GET | `/api/stats/series?days=14` | 营收趋势 |
-| GET | `/api/stats/top` | 畅销商品 |
-| GET | `/api/stats/categories` | 品类结构 |
-| GET | `/api/stats/hourly` | 时段分布 |
-| GET | `/api/stats/payments` | 支付方式占比 |
-| GET | `/api/settings` | 门店资料 |
-| PUT | `/api/settings` | 保存门店资料（店长） |
-| GET | `/api/events` | SSE 事件流（`?token=` 传令牌） |
-| GET | `/api/health` | 健康检查（无需鉴权） |
+| 🔐 认证 | 方法 | 路径 | 说明 |
+|--------|------|------|------|
+| | POST | `/api/auth/login` | 登录，返回 JWT（12h） |
+| | GET | `/api/auth/me` | 当前用户 |
+| 📋 菜单 | GET | `/api/menu` | 分类 + 商品（含库存） |
+| | PATCH | `/api/menu/products/:id` | 改价 / 上下架（店长） |
+| | POST | `/api/menu/products/:id/restock` | 补货（店长） |
+| 🧾 订单 | POST | `/api/orders` | 下单（事务扣库存） |
+| | GET | `/api/orders` | 列表，支持 `status` / `date` / `q` / 分页 |
+| | GET | `/api/orders/:id` | 详情 + 明细 + 库存流水 |
+| | POST | `/api/orders/:id/pay` | 收款 |
+| | POST | `/api/orders/:id/void` | 作废并回补库存 |
+| | GET | `/api/orders/export.csv` | 导出 CSV（沿用列表筛选条件） |
+| 📊 报表 | GET | `/api/stats/overview` | 今日 / 昨日 / 本月 KPI |
+| | GET | `/api/stats/series?days=14` | 营收趋势 |
+| | GET | `/api/stats/top` | 畅销商品 |
+| | GET | `/api/stats/categories` | 品类结构 |
+| | GET | `/api/stats/hourly` | 时段分布 |
+| | GET | `/api/stats/payments` | 支付方式占比 |
+| ⚙️ 设置 | GET | `/api/settings` | 门店资料 |
+| | PUT | `/api/settings` | 保存门店资料（店长） |
+| 📡 实时 | GET | `/api/events` | SSE 事件流（`?token=` 传令牌） |
+| ❤️ 健康 | GET | `/api/health` | 健康检查（无需鉴权） |
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/auth/login \
@@ -281,18 +310,18 @@ curl -s localhost:3000/api/stats/overview -H "Authorization: Bearer $TOKEN" | jq
 
 没有引入任何动画库，全部落在 CSS 与 Web Animations API：
 
-| 场景 | 实现 |
-| --- | --- |
-| 页面切换 | `document.startViewTransition` + `::view-transition-*`，不支持时降级为 fade-up |
-| 加入购物车 | 条目以 `print-in` 逐行「打印」进小票：`clip-path` 由上往下揭示 |
-| 购物车重排 | FLIP：记录首末位置，反推 `translate` 后回放 |
-| 金额变化 | `requestAnimationFrame` + easeOutCubic 数字滚动 |
-| 图表入场 | `stroke-dashoffset` 描边绘制，柱状图 `scaleY` 逐条生长 |
-| 列表入场 | IntersectionObserver + `--i` 变量做 stagger |
-| 报头导航 | 编号 + 朱砂红下划线，`scaleX` 自左展开；编号先变红再变字色 |
-| 标题入场 | `mask-up`：`clip-path` 遮罩内整体上滑，模拟活字上版 |
-| 按钮 | 指针位置计算涟漪；主按钮 `::before` 自下往上填充扫过 |
-| 按钮按下 | `:active` 轻微下压，`transition` 用 spring 曲线 |
+| 场景 | 实现 | 预览 |
+|------|------|------|
+| 页面切换 | `document.startViewTransition` + `::view-transition-*`，不支持时降级为 fade-up | ![view-transition](docs/screenshots/dashboard.png) |
+| 加入购物车 | 条目以 `print-in` 逐行「打印」进小票：`clip-path` 由上往下揭示 | ![print-in](docs/screenshots/pos.png) |
+| 购物车重排 | FLIP：记录首末位置，反推 `translate` 后回放 | — |
+| 金额变化 | `requestAnimationFrame` + easeOutCubic 数字滚动 | — |
+| 图表入场 | `stroke-dashoffset` 描边绘制，柱状图 `scaleY` 逐条生长 | ![chart](docs/screenshots/dashboard.png) |
+| 列表入场 | IntersectionObserver + `--i` 变量做 stagger | — |
+| 报头导航 | 编号 + 朱砂红下划线，`scaleX` 自左展开；编号先变红再变字色 | — |
+| 标题入场 | `mask-up`：`clip-path` 遮罩内整体上滑，模拟活字上版 | — |
+| 按钮 | 指针位置计算涟漪；主按钮 `::before` 自下往上填充扫过 | — |
+| 按钮按下 | `:active` 轻微下压，`transition` 用 spring 曲线 | — |
 
 全站遵循 `prefers-reduced-motion`：系统开启「减少动态效果」后，所有动画降到 0.001ms，功能不受影响。
 
@@ -306,19 +335,19 @@ npm test
 
 26 个集成测试跑在**内存数据库**上，通过真实 HTTP 请求验证：
 
-- 登录成功 / 密码错误 / 无令牌 / 伪造签名 / 连续失败限流
-- 服务端重新计价（前端传 `price: 1` 会被忽略）
-- 优惠金额超过小计时被夹到小计，实收不会为负
-- 下单扣库存；库存不足时整单回滚且库存不变
-- 同一商品拆成两行也守 99 件上限
-- 重复支付被拒绝
-- 作废回补库存、写入流水、不计入营收
-- 补货拒绝负数，流水 `delta` 与库存变化一致
-- 单日流水号超过 999 后仍然唯一
-- 趋势图按天补零、非法参数返回 400、营业时段外的订单不被丢弃
-- CSV 导出遵循当前筛选条件
-- 普通接口不接受 query 里的令牌，只有 SSE 例外
-- 收银员改价返回 403
+- [x] 登录成功 / 密码错误 / 无令牌 / 伪造签名 / 连续失败限流
+- [x] 服务端重新计价（前端传 `price: 1` 会被忽略）
+- [x] 优惠金额超过小计时被夹到小计，实收不会为负
+- [x] 下单扣库存；库存不足时整单回滚且库存不变
+- [x] 同一商品拆成两行也守 99 件上限
+- [x] 重复支付被拒绝
+- [x] 作废回补库存、写入流水、不计入营收
+- [x] 补货拒绝负数，流水 `delta` 与库存变化一致
+- [x] 单日流水号超过 999 后仍然唯一
+- [x] 趋势图按天补零、非法参数返回 400、营业时段外的订单不被丢弃
+- [x] CSV 导出遵循当前筛选条件
+- [x] 普通接口不接受 query 里的令牌，只有 SSE 例外
+- [x] 收银员改价返回 403
 
 ---
 
