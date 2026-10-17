@@ -7,7 +7,7 @@
 [![Tests](https://img.shields.io/badge/tests-26%2F26-2f5d4a.svg)](./tests/api.test.js)
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="经营看板" width="720">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/dashboard.png" alt="经营看板" width="720">
 </p>
 
 ---
@@ -27,16 +27,16 @@
 ## 界面一览
 
 <p align="center">
-  <img src="docs/screenshots/pos.png" width="49%" alt="点单台">
-  <img src="docs/screenshots/checkout.png" width="49%" alt="确认收款">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/pos.png" width="49%" alt="点单台">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/checkout.png" width="49%" alt="确认收款">
 </p>
 <p align="center">
-  <img src="docs/screenshots/orders.png" width="49%" alt="账单流水">
-  <img src="docs/screenshots/inventory.png" width="49%" alt="商品库存">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/orders.png" width="49%" alt="账单流水">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/inventory.png" width="49%" alt="商品库存">
 </p>
 <p align="center">
-  <img src="docs/screenshots/login.png" width="49%" alt="登录页">
-  <img src="docs/screenshots/dashboard.png" width="49%" alt="经营看板">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/login.png" width="49%" alt="登录页">
+  <img src="https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/dashboard.png" width="49%" alt="经营看板">
 </p>
 
 ---
@@ -312,11 +312,11 @@ curl -s localhost:3000/api/stats/overview -H "Authorization: Bearer $TOKEN" | jq
 
 | 场景 | 实现 | 预览 |
 |------|------|------|
-| 页面切换 | `document.startViewTransition` + `::view-transition-*`，不支持时降级为 fade-up | ![view-transition](docs/screenshots/dashboard.png) |
-| 加入购物车 | 条目以 `print-in` 逐行「打印」进小票：`clip-path` 由上往下揭示 | ![print-in](docs/screenshots/pos.png) |
+| 页面切换 | `document.startViewTransition` + `::view-transition-*`，不支持时降级为 fade-up | ![view-transition](https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/dashboard.png) |
+| 加入购物车 | 条目以 `print-in` 逐行「打印」进小票：`clip-path` 由上往下揭示 | ![print-in](https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/pos.png) |
 | 购物车重排 | FLIP：记录首末位置，反推 `translate` 后回放 | — |
 | 金额变化 | `requestAnimationFrame` + easeOutCubic 数字滚动 | — |
-| 图表入场 | `stroke-dashoffset` 描边绘制，柱状图 `scaleY` 逐条生长 | ![chart](docs/screenshots/dashboard.png) |
+| 图表入场 | `stroke-dashoffset` 描边绘制，柱状图 `scaleY` 逐条生长 | ![chart](https://cdn.jsdelivr.net/gh/2154911078-ship-it/mise-pos@main/docs/screenshots/dashboard.png) |
 | 列表入场 | IntersectionObserver + `--i` 变量做 stagger | — |
 | 报头导航 | 编号 + 朱砂红下划线，`scaleX` 自左展开；编号先变红再变字色 | — |
 | 标题入场 | `mask-up`：`clip-path` 遮罩内整体上滑，模拟活字上版 | — |
